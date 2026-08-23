@@ -1,0 +1,86 @@
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=Russo+One&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 4%;
+    --foreground: 46 30% 96%;
+    --card: 0 0% 7%;
+    --card-foreground: 46 30% 96%;
+    --popover: 0 0% 7%;
+    --popover-foreground: 46 30% 96%;
+    --primary: 46 65% 52%;
+    --primary-foreground: 0 0% 5%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 46 30% 96%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 40 8% 64%;
+    --accent: 46 65% 52%;
+    --accent-foreground: 0 0% 5%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 46 20% 18%;
+    --input: 46 15% 22%;
+    --ring: 46 65% 52%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+@layer utilities {
+  .text-gold-gradient {
+    background: linear-gradient(135deg, #f5d876 0%, #d4af37 45%, #a8811f 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .gold-glow {
+    filter: drop-shadow(0 0 30px rgba(212, 175, 55, 0.35));
+  }
+  .gold-glow-sm {
+    filter: drop-shadow(0 0 14px rgba(212, 175, 55, 0.25));
+  }
+  .bg-grid {
+    background-image: linear-gradient(rgba(212, 175, 55, 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(212, 175, 55, 0.06) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .rolling-text > span > span {
+    transition: none !important;
+  }
+}

@@ -1,0 +1,23 @@
+[
+  {
+    "id": "seed1",
+    "name": "Emre \"Ghost\" K.",
+    "pistol": "Glock 18C",
+    "message": "G18C'nin full-auto modu CQB'de inanılmaz etkili. Dar koridorlarda rakibe nefes aldırmıyor. Yedek şarjör taşımayı unutmayın, hızlı bitiyor!",
+    "createdAt": "2026-08-20T18:30:00.000Z"
+  },
+  {
+    "id": "seed2",
+    "name": "Mert A.",
+    "pistol": "Novritsch SSP-5",
+    "message": "SSP-5'in tetik hassasiyeti ve dengesi gerçekten üst düzey. Uzun namlusu sayesinde tabancayla bile orta mesafede isabet oranı çok yüksek.",
+    "createdAt": "2026-08-21T14:10:00.000Z"
+  },
+  {
+    "id": "seed3",
+    "name": "Can \"Deagle\" Y.",
+    "pistol": "Hi-Capa 5.1",
+    "message": "Hi-Capa ile hop-up ayarını iyi yaparsanız tabanca sınıfında rakipsiz. Sadece tabanca oynayan bir ekip görmek harika, başvurumu yaptım!",
+    "createdAt": "2026-08-22T20:45:00.000Z"
+  }
+]
