@@ -1,13 +1,17 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Crosshair, ShieldCheck, Users } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { RollingText } from '@/components/RollingText'
 import { Reveal } from '@/components/Reveal'
+import Magnet from '@/components/bits/Magnet'
+import { playShot } from '@/lib/sfx'
 
 const PistolViewer = lazy(() =>
   import('@/components/three/PistolViewer').then((m) => ({ default: m.PistolViewer }))
 )
+const Particles = lazy(() => import('@/components/bits/Particles'))
+const SplitText = lazy(() => import('@/components/bits/SplitText'))
 
 const PILLARS = [
   {
@@ -27,6 +31,8 @@ const PILLARS = [
   },
 ]
 
+const fireSignal = { current: 0 }
+
 function HeroCanvas() {
   const [mounted, setMounted] = useState(false)
   useEffect(() => {
@@ -37,18 +43,75 @@ function HeroCanvas() {
   return (
     <Suspense fallback={null}>
       <PistolViewer
-        modelUrl="/models/glock18c.glb"
+        modelUrl="/models/colt_m1911.glb"
+        muzzle={-1}
+        animated
+        fireSignal={fireSignal}
+        aim
         className="absolute inset-0"
-        parallax
-        autoRotate
+        size={1.6}
+        position={[1.05, -0.5, 0]}
       />
     </Suspense>
   )
 }
 
-export function Hero() {
+function HeroParticles() {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    const id = window.setTimeout(() => setMounted(true), 600)
+    return () => window.clearTimeout(id)
+  }, [])
+  if (!mounted) return null
   return (
-    <section id="anasayfa" className="relative overflow-hidden bg-grid">
+    <div className="pointer-events-none absolute inset-0 opacity-50">
+      <Suspense fallback={null}>
+        <Particles
+          particleCount={180}
+          particleSpread={12}
+          speed={0.08}
+          particleColors={['#d4af37', '#f5d876', '#8a6d1f']}
+          moveParticlesOnHover
+        />
+      </Suspense>
+    </div>
+  )
+}
+
+export function Hero() {
+  const [shots, setShots] = useState(0)
+
+  useEffect(() => {
+    try {
+      setShots(Number(localStorage.getItem('pv_hero_shots') ?? '0'))
+    } catch {
+      // localStorage kapalıysa sessizce geç
+    }
+  }, [])
+
+  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLElement>) => {
+    const target = e.target as HTMLElement
+    if (target.closest('a, button, input, textarea')) return
+    fireSignal.current += 1
+    playShot()
+    setShots((s) => {
+      const next = s + 1
+      try {
+        localStorage.setItem('pv_hero_shots', String(next))
+      } catch {
+        // yoksay
+      }
+      return next
+    })
+  }, [])
+
+  return (
+    <section
+      id="anasayfa"
+      className="relative overflow-hidden bg-grid"
+      onPointerDown={handlePointerDown}
+    >
+      <HeroParticles />
       <div
         className="pointer-events-none absolute inset-0"
         style={{
@@ -67,12 +130,27 @@ export function Hero() {
           <h1 className="mt-4 font-display text-2xl uppercase tracking-wide text-foreground sm:text-4xl">
             A.T.A Pistol Team
           </h1>
-          <p
-            className="mt-2 font-display uppercase text-gold-gradient"
-            style={{ fontSize: 'clamp(3rem, 10vw, 8rem)', lineHeight: 1.05, letterSpacing: '-0.02em' }}
-          >
-            Sadece Tabanca
-          </p>
+          <div className="gold-glow-sm">
+            <Suspense fallback={
+              <p
+                className="mt-2 font-display uppercase text-gold-gradient"
+                style={{ fontSize: 'clamp(3rem, 10vw, 8rem)', lineHeight: 1.05, letterSpacing: '-0.02em' }}
+              >
+                Sadece Tabanca
+              </p>
+            }>
+              <SplitText
+                text="SADECE TABANCA"
+                className="split-gold mt-2 inline-block font-display uppercase text-[clamp(3rem,10vw,8rem)] leading-[1.05] tracking-[-0.02em]"
+                delay={45}
+                duration={0.9}
+                splitType="chars"
+                from={{ opacity: 0, y: 60, rotateX: -80 }}
+                to={{ opacity: 1, y: 0, rotateX: 0 }}
+                textAlign="center"
+              />
+            </Suspense>
+          </div>
           <p className="mx-auto mt-6 max-w-xl text-base text-muted-foreground sm:text-lg">
             Tüfek yok, sniper yok. Sadece tabanca, refleks ve cesaret. Adana&apos;nın tek tabanca-only
             airsoft ekibine hoş geldin.
@@ -80,19 +158,30 @@ export function Hero() {
         </Reveal>
 
         <Reveal delay={200} className="pointer-events-auto mt-10 flex flex-col items-center gap-4 sm:flex-row">
-          <Button asChild size="lg">
-            <a href="#basvuru">
-              <RollingText text="Hemen Başvur" />
-            </a>
-          </Button>
-          <Button asChild size="lg" variant="outline">
-            <a href="#arena">
-              <RollingText text="Refleksini Test Et" />
-            </a>
-          </Button>
+          <Magnet padding={48} magnetStrength={4}>
+            <Button asChild size="lg">
+              <a href="#basvuru">
+                <RollingText text="Hemen Başvur" />
+              </a>
+            </Button>
+          </Magnet>
+          <Magnet padding={48} magnetStrength={4}>
+            <Button asChild size="lg" variant="outline">
+              <a href="#arena">
+                <RollingText text="Refleksini Test Et" />
+              </a>
+            </Button>
+          </Magnet>
         </Reveal>
 
-        <div className="pointer-events-auto mt-20 grid w-full max-w-4xl grid-cols-1 gap-4 sm:grid-cols-3">
+        <Reveal delay={350}>
+          <p className="mt-6 flex items-center justify-center gap-2 text-xs uppercase tracking-[0.25em] text-muted-foreground/80">
+            <Crosshair className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+            Sahaya tıkla — tabanca ateş eder
+          </p>
+        </Reveal>
+
+        <div className="pointer-events-auto mt-14 grid w-full max-w-4xl grid-cols-1 gap-4 sm:grid-cols-3">
           {PILLARS.map((pillar, i) => (
             <Reveal key={pillar.title} delay={300 + i * 120}>
               <div className="rounded-lg border border-border bg-card/60 p-6 text-left backdrop-blur-sm transition-colors duration-200 hover:border-primary/50">
@@ -105,6 +194,12 @@ export function Hero() {
             </Reveal>
           ))}
         </div>
+
+        {shots > 0 && (
+          <div className="pointer-events-none absolute right-6 top-24 rounded border border-primary/40 bg-background/70 px-3 py-1.5 font-display text-xs uppercase tracking-widest text-primary backdrop-blur-sm">
+            {shots} mermi atıldı
+          </div>
+        )}
       </div>
     </section>
   )

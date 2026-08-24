@@ -1,5 +1,6 @@
 import { Navbar } from '@/components/Navbar'
 import { Hero } from '@/components/Hero'
+import { StatsStrip } from '@/components/StatsStrip'
 import { Arsenal } from '@/components/Arsenal'
 import { RangeGame } from '@/components/RangeGame'
 import { Leaderboard } from '@/components/Leaderboard'
@@ -16,6 +17,7 @@ export default function App() {
       <Navbar />
       <main>
         <Hero />
+        <StatsStrip />
         <Arsenal />
         <RangeGame />
         <Leaderboard />

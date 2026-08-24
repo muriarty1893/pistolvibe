@@ -48,6 +48,14 @@
     background-clip: text;
     color: transparent;
   }
+  /* SplitText char konteynerleri için altın gradyan */
+  .split-gold div,
+  .split-gold span {
+    background: linear-gradient(135deg, #f5d876 0%, #d4af37 45%, #a8811f 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
   .gold-glow {
     filter: drop-shadow(0 0 30px rgba(212, 175, 55, 0.35));
   }
