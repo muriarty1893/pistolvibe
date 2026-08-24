@@ -151,6 +151,7 @@ class RedisConnection {
 export interface RedisClient {
   lRange(key: string, start: number, stop: number): Promise<string[]>
   lPush(key: string, value: string): Promise<number>
+  lRem(key: string, count: number, value: string): Promise<number>
   incr(key: string): Promise<number>
   expire(key: string, seconds: number): Promise<number>
   del(...keys: string[]): Promise<number>
@@ -191,6 +192,10 @@ export async function createRedisClient(url: string): Promise<RedisClient & { cl
     },
     async lPush(key, value) {
       const res = await conn.command('LPUSH', key, value)
+      return res as number
+    },
+    async lRem(key, count, value) {
+      const res = await conn.command('LREM', key, String(count), value)
       return res as number
     },
     async incr(key) {

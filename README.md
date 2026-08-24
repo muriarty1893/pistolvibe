@@ -28,6 +28,17 @@ Fotoğrafı `src/assets/gallery/` klasörüne at (png/jpg/webp/avif), commit'le,
 
 Vercel dashboard → **Storage** → Redis veritabanın → **Data Browser**: `comments` ve `applications` listelerinde tüm kayıtlar görülebilir.
 
+## Admin Paneli
+
+`/admin` adresinde şifre korumalı yönetim paneli var: başvuruları ve yorumları görüntüleme + tek tıkla silme.
+
+Kurulum:
+1. Vercel dashboard → proje → **Settings → Environment Variables** → `ADMIN_PASSWORD` ekle (güçlü bir şifre seç, örn. `openssl rand -base64 18` çıktısı).
+2. Bir kez **Redeploy** yap.
+3. `https://<site-adresin>/admin` → şifreyi gir.
+
+Panel ana siteden linklenmez; adresi sadece ekibe söyle.
+
 ## Proje Yapısı
 
 ```

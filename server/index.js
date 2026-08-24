@@ -113,9 +113,48 @@ app.post('/api/applications', rateLimit, async (req, res) => {
 // Not: Galeri görselleri artık build sırasında toplanıyor (src/assets/gallery),
 // bu yüzden /api/gallery ucu kaldırıldı.
 
+// ── Admin (yerel geliştirme; Vercel'de api/admin-*.ts çalışır) ──
+function adminAuth(req, res) {
+  const password = process.env.ADMIN_PASSWORD
+  if (!password) {
+    res.status(500).json({ error: 'ADMIN_PASSWORD ortam değişkeni tanımlı değil.' })
+    return false
+  }
+  if (req.headers['x-admin-key'] !== password) {
+    res.status(401).json({ error: 'Yetkisiz erişim.' })
+    return false
+  }
+  return true
+}
+
+app.get('/api/admin/data', async (req, res) => {
+  if (!adminAuth(req, res)) return
+  const comments = await readJson(COMMENTS_FILE, [])
+  const applications = await readJson(APPLICATIONS_FILE, [])
+  res.json({ comments, applications })
+})
+
+app.post('/api/admin/delete', async (req, res) => {
+  if (!adminAuth(req, res)) return
+  const type = req.body?.type
+  const id = String(req.body?.id || '')
+  if ((type !== 'comment' && type !== 'application') || !id) {
+    return res.status(400).json({ error: 'Geçersiz istek.' })
+  }
+  const file = type === 'comment' ? COMMENTS_FILE : APPLICATIONS_FILE
+  const items = await readJson(file, [])
+  const filtered = items.filter((it) => it.id !== id)
+  if (filtered.length === items.length) {
+    return res.status(404).json({ error: 'Kayıt bulunamadı.' })
+  }
+  await writeJson(file, filtered)
+  res.json({ ok: true, removed: items.length - filtered.length })
+})
+
 if (process.env.NODE_ENV === 'production') {
   const dist = path.join(ROOT, 'dist')
   app.use(express.static(dist))
+  app.get('/admin', (_req, res) => res.sendFile(path.join(dist, 'admin.html')))
   app.get('*', (_req, res) => res.sendFile(path.join(dist, 'index.html')))
 }
 

@@ -1,12 +1,5 @@
 [
   {
-    "id": "seed1",
-    "name": "Emre \"Ghost\" K.",
-    "pistol": "Glock 18C",
-    "message": "G18C'nin full-auto modu CQB'de inanılmaz etkili. Dar koridorlarda rakibe nefes aldırmıyor. Yedek şarjör taşımayı unutmayın, hızlı bitiyor!",
-    "createdAt": "2026-08-20T18:30:00.000Z"
-  },
-  {
     "id": "seed2",
     "name": "Mert A.",
     "pistol": "Novritsch SSP-5",
