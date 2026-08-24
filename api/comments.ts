@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { clean, getClientIp, isRateLimited, withRedis } from './_redis'
+import { clean, getClientIp, isRateLimited, withRedis } from './redis-client'
 
 export interface Comment {
   id: string
