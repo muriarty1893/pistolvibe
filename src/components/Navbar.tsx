@@ -37,7 +37,7 @@ export function Navbar() {
         <a href="#anasayfa" className="flex cursor-pointer items-center gap-3">
           <img src="/assets/logo-nobg.png" alt="Pistol Vibe logosu" className="h-10 w-10 gold-glow-sm" />
           <span className="font-display text-sm uppercase tracking-widest text-foreground sm:text-base">
-            Adana <span className="text-gold-gradient">Tactical</span>
+            Pistol <span className="text-gold-gradient">Vibe</span>
           </span>
         </a>
 

@@ -36,7 +36,7 @@ export function Hero() {
         <Reveal>
           <img
             src="/assets/logo-nobg.png"
-            alt="Adana Tactical Airsoft — Pistol Vibe logosu"
+            alt="Pistol Vibe logosu"
             className="mx-auto h-40 w-40 gold-glow sm:h-52 sm:w-52"
           />
         </Reveal>
@@ -46,7 +46,7 @@ export function Hero() {
             Airsoft Takımı • Adana
           </p>
           <h1 className="mt-4 font-display text-2xl uppercase tracking-wide text-foreground sm:text-4xl">
-            Adana Tactical Airsoft
+            A.T.A Pistol Team
           </h1>
           <p
             className="mt-2 font-display uppercase text-gold-gradient"

@@ -7,7 +7,7 @@ export function Footer() {
         <img src="/assets/logo-nobg.png" alt="Pistol Vibe logosu" className="h-14 w-14 gold-glow-sm" />
         <div>
           <p className="font-display text-lg uppercase tracking-wide">
-            Adana <span className="text-gold-gradient">Tactical</span> Airsoft
+            Pistol <span className="text-gold-gradient">Vibe</span>
           </p>
           <p className="mt-1 text-xs uppercase tracking-[0.3em] text-muted-foreground">
             Sadece Tabanca
@@ -19,7 +19,7 @@ export function Footer() {
           olmadan asla oyuna girmeyiz.
         </p>
         <p className="text-xs text-muted-foreground/60">
-          © {new Date().getFullYear()} Adana Tactical Airsoft. Tüm hakları saklıdır.
+          © {new Date().getFullYear()} Pistol Vibe. Tüm hakları saklıdır.
         </p>
       </div>
     </footer>
