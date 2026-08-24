@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { clean, getClientIp, isRateLimited, withRedis } from './redis-client'
+import { clean, getClientIp, isRateLimited, withRedis } from './redis-client.js'
 
 interface Application {
   id: string
