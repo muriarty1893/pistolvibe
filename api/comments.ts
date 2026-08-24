@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { kv } from '@vercel/kv'
+import { clean, getClientIp, isRateLimited, withRedis } from './_redis'
 
 export interface Comment {
   id: string
@@ -9,35 +9,28 @@ export interface Comment {
   createdAt: string
 }
 
-const clean = (value: unknown, max = 500): string =>
-  String(value ?? '')
-    .replace(/[<>]/g, '')
-    .trim()
-    .slice(0, max)
-
-// KV tabanlı hız sınırı: IP başına dakikada 10 istek
-async function isRateLimited(ip: string, bucket: string): Promise<boolean> {
-  const key = `rl:${bucket}:${ip}`
-  const count = await kv.incr(key)
-  if (count === 1) await kv.expire(key, 60)
-  return count > 10
-}
-
-export function getClientIp(req: VercelRequest): string {
-  const forwarded = req.headers['x-forwarded-for']
-  const raw = Array.isArray(forwarded) ? forwarded[0] : forwarded
-  return raw?.split(',')[0].trim() || req.socket?.remoteAddress || 'unknown'
-}
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     if (req.method === 'GET') {
-      const comments = await kv.lrange<Comment>('comments', 0, -1)
+      const comments = await withRedis(async (client) => {
+        const raw = await client.lRange('comments', 0, -1)
+        return raw
+          .map((item) => {
+            try {
+              return JSON.parse(item) as Comment
+            } catch {
+              return null
+            }
+          })
+          .filter((c): c is Comment => c !== null)
+      })
       return res.status(200).json(comments ?? [])
     }
 
     if (req.method === 'POST') {
-      if (await isRateLimited(getClientIp(req), 'comments')) {
+      const ip = getClientIp(req)
+      const limited = await withRedis((client) => isRateLimited(client, ip, 'comments'))
+      if (limited) {
         return res
           .status(429)
           .json({ error: 'Çok fazla istek gönderdin. Lütfen biraz sonra tekrar dene.' })
@@ -58,7 +51,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         message,
         createdAt: new Date().toISOString(),
       }
-      await kv.lpush('comments', comment)
+      await withRedis((client) => client.lPush('comments', JSON.stringify(comment)))
       return res.status(201).json(comment)
     }
 

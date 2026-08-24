@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { kv } from '@vercel/kv'
+import { clean, getClientIp, isRateLimited, withRedis } from './_redis'
 
 interface Application {
   id: string
@@ -14,25 +14,6 @@ interface Application {
   createdAt: string
 }
 
-const clean = (value: unknown, max = 500): string =>
-  String(value ?? '')
-    .replace(/[<>]/g, '')
-    .trim()
-    .slice(0, max)
-
-async function isRateLimited(ip: string): Promise<boolean> {
-  const key = `rl:applications:${ip}`
-  const count = await kv.incr(key)
-  if (count === 1) await kv.expire(key, 60)
-  return count > 10
-}
-
-function getClientIp(req: VercelRequest): string {
-  const forwarded = req.headers['x-forwarded-for']
-  const raw = Array.isArray(forwarded) ? forwarded[0] : forwarded
-  return raw?.split(',')[0].trim() || req.socket?.remoteAddress || 'unknown'
-}
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
@@ -40,7 +21,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    if (await isRateLimited(getClientIp(req))) {
+    const ip = getClientIp(req)
+    const limited = await withRedis((client) => isRateLimited(client, ip, 'applications'))
+    if (limited) {
       return res
         .status(429)
         .json({ error: 'Çok fazla istek gönderdin. Lütfen biraz sonra tekrar dene.' })
@@ -72,7 +55,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Geçerli bir e-posta adresi girin.' })
     }
 
-    await kv.lpush('applications', application)
+    await withRedis((client) => client.lPush('applications', JSON.stringify(application)))
     return res.status(201).json({ ok: true })
   } catch (err) {
     console.error('applications hatası:', err)
