@@ -1,8 +1,16 @@
-import net from 'node:net'
-
 // ── Minimal Redis client over TCP (RESP protocol) ──────────────────────
-// Zero external dependencies. Guaranteed to work in any Node.js serverless
-// runtime (Vercel, Cloudflare, Netlify, etc.).
+// Zero external dependencies, zero top-level imports.
+// 'net' is imported dynamically at runtime so the serverless bundler
+// never has to resolve Node.js built-ins at build time.
+
+interface NetSocket {
+  on(event: string, listener: (...args: any[]) => void): unknown
+  off(event: string, listener: (...args: any[]) => void): unknown
+  write(data: Buffer): boolean
+  end(): unknown
+  destroy(error?: Error): unknown
+  setTimeout(ms: number): unknown
+}
 
 interface RedisConfig {
   host: string
@@ -89,17 +97,17 @@ function parseResp(buf: Buffer, offset: number): { value: unknown; next: number 
 }
 
 class RedisConnection {
-  private socket: net.Socket
+  private socket: NetSocket
   private buf: Buffer = Buffer.alloc(0)
   private pending: Array<{ resolve: (v: unknown) => void; reject: (e: Error) => void }> = []
 
-  constructor(config: RedisConfig) {
-    this.socket = net.createConnection({ host: config.host, port: config.port })
+  constructor(socket: NetSocket) {
+    this.socket = socket
     this.socket.on('data', (chunk: Buffer) => {
       this.buf = Buffer.concat([this.buf, chunk])
       this.drain()
     })
-    this.socket.on('error', (err) => {
+    this.socket.on('error', (err: Error) => {
       const p = this.pending.shift()
       if (p) p.reject(err)
     })
@@ -150,14 +158,23 @@ export interface RedisClient {
 
 export async function createRedisClient(url: string): Promise<RedisClient & { close(): void }> {
   const config = parseRedisUrl(url)
-  const conn = new RedisConnection(config)
 
-  // Wait for the socket to connect, then authenticate
+  // Dinamik import — bundler build sırasında işlemez, Node.js çalışma zamanında çözer
+  const netModule: any = await import('net')
+  const createConnection = netModule.createConnection || netModule.default?.createConnection
+  if (typeof createConnection !== 'function') {
+    throw new Error("net.createConnection bulunamadı (dinamik import başarısız).")
+  }
+
+  const socket: NetSocket = createConnection({ host: config.host, port: config.port })
+  const conn = new RedisConnection(socket)
+
+  // Socket bağlanana kadar bekle, sonra AUTH yap
   await new Promise<void>((resolve, reject) => {
     const onError = (err: Error) => reject(err)
-    conn['socket'].on('error', onError)
-    conn['socket'].on('connect', async () => {
-      conn['socket'].off('error', onError)
+    socket.on('error', onError)
+    socket.on('connect', async () => {
+      socket.off('error', onError)
       try {
         await conn.auth(config.password)
         resolve()
