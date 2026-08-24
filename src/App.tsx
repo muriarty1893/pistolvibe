@@ -1,5 +1,8 @@
 import { Navbar } from '@/components/Navbar'
 import { Hero } from '@/components/Hero'
+import { Arsenal } from '@/components/Arsenal'
+import { RangeGame } from '@/components/RangeGame'
+import { Leaderboard } from '@/components/Leaderboard'
 import { ApplicationForm } from '@/components/ApplicationForm'
 import { Gallery } from '@/components/Gallery'
 import { Sponsors } from '@/components/Sponsors'
@@ -13,6 +16,9 @@ export default function App() {
       <Navbar />
       <main>
         <Hero />
+        <Arsenal />
+        <RangeGame />
+        <Leaderboard />
         <ApplicationForm />
         <Gallery />
         <Sponsors />

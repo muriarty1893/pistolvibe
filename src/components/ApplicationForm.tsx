@@ -74,6 +74,11 @@ export function ApplicationForm() {
       toast.success('Başvurun alındı!', {
         description: 'En kısa sürede sana dönüş yapacağız. Sahada görüşürüz.',
       })
+      try {
+        localStorage.setItem('pv_callsign', values.callsign)
+      } catch {
+        // localStorage kapalıysa sessizce geç
+      }
       form.reset()
     } catch (err) {
       toast.error('Gönderilemedi', {

@@ -11,6 +11,7 @@ const PORT = process.env.PORT || 3001
 const DATA_DIR = path.join(__dirname, 'data')
 const COMMENTS_FILE = path.join(DATA_DIR, 'comments.json')
 const APPLICATIONS_FILE = path.join(DATA_DIR, 'applications.json')
+const SCORES_FILE = path.join(DATA_DIR, 'scores.json')
 
 app.use(express.json({ limit: '20kb' }))
 
@@ -108,6 +109,41 @@ app.post('/api/applications', rateLimit, async (req, res) => {
   applications.unshift(application)
   await writeJson(APPLICATIONS_FILE, applications)
   res.status(201).json({ ok: true })
+})
+
+// ── Refleks Arenası skor tablosu ──
+app.get('/api/scores', async (_req, res) => {
+  const scores = await readJson(SCORES_FILE, [])
+  const top = scores.sort((a, b) => b.score - a.score).slice(0, 10)
+  res.json(top)
+})
+
+app.post('/api/scores', rateLimit, async (req, res) => {
+  const callsign = clean(req.body?.callsign, 20)
+  const score = Math.floor(Number(req.body?.score))
+  const accuracy = Math.min(100, Math.max(0, Math.floor(Number(req.body?.accuracy) || 0)))
+  const bestStreak = Math.min(999, Math.max(0, Math.floor(Number(req.body?.bestStreak) || 0)))
+
+  if (!callsign || callsign.length < 2) {
+    return res.status(400).json({ error: 'Çağrı adı en az 2 karakter olmalı.' })
+  }
+  // Saçma skorları filtrele: 30 saniyede teorik maksimum ~4000
+  if (!Number.isFinite(score) || score < 0 || score > 10000) {
+    return res.status(400).json({ error: 'Geçersiz skor.' })
+  }
+
+  const scores = await readJson(SCORES_FILE, [])
+  const entry = {
+    id: Date.now().toString(36),
+    callsign,
+    score,
+    accuracy,
+    bestStreak,
+    createdAt: new Date().toISOString(),
+  }
+  scores.push(entry)
+  await writeJson(SCORES_FILE, scores)
+  res.status(201).json(entry)
 })
 
 // Not: Galeri görselleri artık build sırasında toplanıyor (src/assets/gallery),

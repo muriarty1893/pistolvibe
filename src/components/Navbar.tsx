@@ -6,9 +6,10 @@ import { RollingText } from '@/components/RollingText'
 import { cn } from '@/lib/utils'
 
 const LINKS = [
-  { href: '#basvuru', label: 'Başvuru' },
+  { href: '#cephanelik', label: 'Cephanelik' },
+  { href: '#arena', label: 'Arena' },
+  { href: '#tablo', label: 'Tablo' },
   { href: '#galeri', label: 'Galeri' },
-  { href: '#sponsorlar', label: 'Sponsorlar' },
   { href: '#topluluk', label: 'Topluluk' },
 ]
 
