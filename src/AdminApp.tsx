@@ -52,7 +52,7 @@ export default function AdminApp() {
   const load = useCallback(async (key: string): Promise<boolean> => {
     setLoading(true)
     try {
-      const res = await fetch('/api/admin/data', { headers: { 'x-admin-key': key } })
+      const res = await fetch('/api/admin', { headers: { 'x-admin-key': key } })
       const body = await res.json().catch(() => null)
       if (!res.ok) throw new Error(body?.error || 'Bir hata oluştu.')
       setData(body)
@@ -99,7 +99,7 @@ export default function AdminApp() {
   async function handleDelete(type: 'comment' | 'application', id: string) {
     if (!window.confirm('Bu kaydı silmek istediğine emin misin?')) return
     try {
-      const res = await fetch('/api/admin/delete', {
+      const res = await fetch('/api/admin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey },
         body: JSON.stringify({ type, id }),

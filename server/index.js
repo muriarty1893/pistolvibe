@@ -127,14 +127,14 @@ function adminAuth(req, res) {
   return true
 }
 
-app.get('/api/admin/data', async (req, res) => {
+app.get('/api/admin', async (req, res) => {
   if (!adminAuth(req, res)) return
   const comments = await readJson(COMMENTS_FILE, [])
   const applications = await readJson(APPLICATIONS_FILE, [])
   res.json({ comments, applications })
 })
 
-app.post('/api/admin/delete', async (req, res) => {
+app.post('/api/admin', async (req, res) => {
   if (!adminAuth(req, res)) return
   const type = req.body?.type
   const id = String(req.body?.id || '')
