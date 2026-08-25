@@ -3,6 +3,7 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { useGLTF, Float, ContactShadows, Environment } from '@react-three/drei'
 import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js'
 import * as THREE from 'three'
+import { getFlashTexture } from '@/lib/flashTexture'
 
 export interface PistolMeshConfig {
   url: string
@@ -99,6 +100,7 @@ function PistolMesh({
       lastFire.current = fireSignal.current
       flashTimer.current = FLASH_DURATION
       fireAction?.reset().play()
+      if (flash.current) flash.current.rotation.z = Math.random() * Math.PI * 2
     }
     if (flashTimer.current > 0) {
       flashTimer.current -= delta
@@ -141,17 +143,23 @@ function PistolMesh({
     <>
       <group ref={flash} position={muzzleTip} visible={false}>
         <mesh>
-          <sphereGeometry args={[0.09, 10, 10]} />
-          <meshBasicMaterial color="#ffdd88" transparent opacity={0.9} />
-        </mesh>
-        <mesh rotation={[0, 0, Math.PI / 4]}>
-          <planeGeometry args={[0.42, 0.42]} />
+          <planeGeometry args={[0.85, 0.85]} />
           <meshBasicMaterial
-            color="#ffcc66"
+            map={getFlashTexture()}
             transparent
-            opacity={0.55}
-            side={THREE.DoubleSide}
+            blending={THREE.AdditiveBlending}
             depthWrite={false}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+        <mesh rotation={[0, Math.PI / 2, 0]}>
+          <planeGeometry args={[0.85, 0.85]} />
+          <meshBasicMaterial
+            map={getFlashTexture()}
+            transparent
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+            side={THREE.DoubleSide}
           />
         </mesh>
       </group>

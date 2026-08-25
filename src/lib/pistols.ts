@@ -15,23 +15,6 @@ export interface Pistol {
 
 export const PISTOLS: Pistol[] = [
   {
-    id: 'glock18c',
-    name: 'Glock 18C',
-    nickname: 'The Ripper',
-    model: '/models/glock18c.glb',
-    description:
-      'Otomatik ateşleme yeteneğiyle CQB’nin kralı. Yakın mesafede kimse seninle başa çıkamaz — tek şart: kontrol.',
-    stats: [
-      { label: 'Hasar', value: 62 },
-      { label: 'Atış Hızı', value: 98 },
-      { label: 'Şarjör', value: 80 },
-      { label: 'Kontrol', value: 45 },
-    ],
-    caliber: '9x19mm',
-    role: 'CQB Sprint',
-    muzzle: 1,
-  },
-  {
     id: 'colt_m1911',
     name: 'Colt M1911',
     nickname: 'The Classic',
@@ -82,22 +65,5 @@ export const PISTOLS: Pistol[] = [
     caliber: '9x19mm',
     role: 'Standard',
     muzzle: -1,
-  },
-  {
-    id: 'deagle',
-    name: 'Desert Eagle',
-    nickname: 'The Hand Cannon',
-    model: '/models/deagle.glb',
-    description:
-      'El tabancası mı, top mu? Tek atışta mesaj belli. Sabır ve soğukkanlılık gerektirir — ödülü ise muazzam.',
-    stats: [
-      { label: 'Hasar', value: 98 },
-      { label: 'Atış Hızı', value: 30 },
-      { label: 'Şarjör', value: 35 },
-      { label: 'Kontrol', value: 40 },
-    ],
-    caliber: '.50 AE',
-    role: 'One Tap',
-    muzzle: 1,
   },
 ]

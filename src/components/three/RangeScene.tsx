@@ -3,6 +3,7 @@ import { Canvas, useFrame, type ThreeEvent } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js'
 import * as THREE from 'three'
+import { getFlashTexture } from '@/lib/flashTexture'
 
 export interface RangeSceneProps {
   active: boolean
@@ -34,6 +35,35 @@ let nextId = 1
 const RISE_DURATION = 0.28
 const FALL_DURATION = 0.16
 
+/** Oyun içi namlu alevi: additive sprite, her atışta rastgele döner */
+function MuzzleFlash({ innerRef }: { innerRef: React.RefObject<THREE.Group> }) {
+  const tex = useMemo(() => getFlashTexture(), [])
+  return (
+    <group ref={innerRef} visible={false}>
+      <mesh>
+        <planeGeometry args={[0.55, 0.55]} />
+        <meshBasicMaterial
+          map={tex}
+          transparent
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+      <mesh rotation={[0, Math.PI / 2, 0]}>
+        <planeGeometry args={[0.55, 0.55]} />
+        <meshBasicMaterial
+          map={tex}
+          transparent
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+    </group>
+  )
+}
+
 function SteelTarget({
   data,
   active,
@@ -57,51 +87,54 @@ function SteelTarget({
     } else {
       rise = 1
     }
-    group.current.position.y = data.y - 0.9 * (1 - rise)
-    group.current.rotation.y = Math.sin(age * 3) * 0.06
+    group.current.position.y = data.y - 1.1 * (1 - rise)
   })
 
   return (
-    <group ref={group} position={[data.x, data.y - 0.9, data.z]}>
-      {/* stand: hedef yükselirken zeminde kalır */}
-      <mesh position={[0, -0.62, 0]}>
-        <boxGeometry args={[0.08, 0.62, 0.05]} />
+    <group ref={group} position={[data.x, data.y - 1.1, data.z]}>
+      {/* direk + ayak */}
+      <mesh position={[0, -0.75, 0]}>
+        <boxGeometry args={[0.09, 0.75, 0.06]} />
         <meshStandardMaterial color="#3a3a42" metalness={0.7} roughness={0.5} />
       </mesh>
-      <mesh position={[0, -0.92, 0]} visible={active}>
-        <boxGeometry args={[0.5, 0.06, 0.4]} />
+      <mesh position={[0, -1.12, 0]}>
+        <boxGeometry args={[0.55, 0.07, 0.45]} />
         <meshStandardMaterial color="#2c2c34" metalness={0.6} roughness={0.6} />
       </mesh>
-      <mesh onPointerDown={onHit} visible={active}>
-        <cylinderGeometry args={[0.42, 0.42, 0.07, 28]} />
-        <meshStandardMaterial
-          color="#d8d8e2"
-          metalness={0.55}
-          roughness={0.35}
-          emissive="#9a9aa8"
-          emissiveIntensity={0.22}
-        />
-      </mesh>
-      <mesh position={[0, 0, 0.045]} rotation={[Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.24, 0.32, 28]} />
-        <meshStandardMaterial
-          color="#d4af37"
-          metalness={0.5}
-          roughness={0.35}
-          emissive="#d4af37"
-          emissiveIntensity={0.7}
-        />
-      </mesh>
-      <mesh position={[0, 0, 0.05]} rotation={[Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[0.1, 20]} />
-        <meshStandardMaterial color="#b02a2a" roughness={0.5} emissive="#7a1a1a" emissiveIntensity={0.5} />
-      </mesh>
+      {/* dikey çelik hedef — kameraya bakar */}
+      <group onPointerDown={onHit} visible={active}>
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.42, 0.42, 0.06, 32]} />
+          <meshStandardMaterial
+            color="#d8d8e2"
+            metalness={0.55}
+            roughness={0.35}
+            emissive="#9a9aa8"
+            emissiveIntensity={0.22}
+          />
+        </mesh>
+        <mesh position={[0, 0, 0.035]}>
+          <ringGeometry args={[0.24, 0.32, 32]} />
+          <meshStandardMaterial
+            color="#d4af37"
+            metalness={0.5}
+            roughness={0.35}
+            emissive="#d4af37"
+            emissiveIntensity={0.7}
+          />
+        </mesh>
+        <mesh position={[0, 0, 0.04]}>
+          <circleGeometry args={[0.1, 24]} />
+          <meshStandardMaterial color="#b02a2a" roughness={0.5} emissive="#7a1a1a" emissiveIntensity={0.5} />
+        </mesh>
+      </group>
     </group>
   )
 }
 
 function Spark({ data, onDone }: { data: Spark; onDone: (id: number) => void }) {
   const ref = useRef<THREE.Mesh>(null)
+  const tex = useMemo(() => getFlashTexture(), [])
 
   useFrame(() => {
     const l = (performance.now() / 1000 - data.born) / 0.3
@@ -110,22 +143,31 @@ function Spark({ data, onDone }: { data: Spark; onDone: (id: number) => void }) 
       return
     }
     if (ref.current) {
-      ref.current.scale.setScalar(0.2 + l * 1.4)
+      ref.current.scale.setScalar(0.25 + l * 1.1)
       const mat = ref.current.material as THREE.MeshBasicMaterial
       mat.opacity = 1 - l
     }
   })
 
   return (
-    <mesh ref={ref} position={[data.x, data.y, data.z]} rotation={[Math.PI / 2, 0, 0]}>
-      <ringGeometry args={[0.3, 0.42, 24]} />
-      <meshBasicMaterial color="#ffd777" transparent opacity={0.9} side={THREE.DoubleSide} />
+    <mesh ref={ref} position={[data.x, data.y, data.z]}>
+      <planeGeometry args={[0.6, 0.6]} />
+      <meshBasicMaterial
+        map={tex}
+        transparent
+        opacity={0.9}
+        blending={THREE.AdditiveBlending}
+        depthWrite={false}
+        side={THREE.DoubleSide}
+      />
     </mesh>
   )
 }
 
 function ViewModel({ shotSignal }: { shotSignal: { current: number } }) {
   const { scene, animations } = useGLTF('/models/colt_m1911.glb')
+  const yawRef = useRef<THREE.Group>(null)
+  const pitchRef = useRef<THREE.Group>(null)
   const group = useRef<THREE.Group>(null)
   const flash = useRef<THREE.Group>(null)
   const flashLight = useRef<THREE.PointLight>(null)
@@ -160,56 +202,66 @@ function ViewModel({ shotSignal }: { shotSignal: { current: number } }) {
     const action = mixer.clipAction(clip)
     action.loop = THREE.LoopOnce
     action.clampWhenFinished = true
-    return { clone, s, mixer, action }
+    action.timeScale = 10
+    return { clone, mixer, action }
   }, [scene, animations])
 
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     prepared.mixer.update(delta)
+
+    // imleci takip et (FPS aim)
+    if (yawRef.current) {
+      const targetYaw = -state.pointer.x * 0.14
+      yawRef.current.rotation.y = THREE.MathUtils.damp(
+        yawRef.current.rotation.y,
+        targetYaw,
+        8,
+        delta
+      )
+    }
+    if (pitchRef.current) {
+      const targetPitch = state.pointer.y * 0.1
+      pitchRef.current.rotation.x = THREE.MathUtils.damp(
+        pitchRef.current.rotation.x,
+        targetPitch,
+        8,
+        delta
+      )
+    }
 
     if (shotSignal.current !== lastShot.current) {
       lastShot.current = shotSignal.current
       prepared.action.reset().play()
       flashPower.current = 1
       kick.current = 1
+      if (flash.current) flash.current.rotation.z = Math.random() * Math.PI * 2
     }
     kick.current = THREE.MathUtils.damp(kick.current, 0, 12, delta)
-    flashPower.current = THREE.MathUtils.damp(flashPower.current, 0, 26, delta)
+    flashPower.current = THREE.MathUtils.damp(flashPower.current, 0, 30, delta)
 
     if (group.current) {
       group.current.position.set(0.66, 0.94, 2.55)
       group.current.position.z += kick.current * 0.1
       group.current.position.y += kick.current * 0.025
-      group.current.rotation.set(kick.current * 0.22, -Math.PI / 2 - 0.06, 0.02)
     }
     const fp = Math.max(flashPower.current, 0)
     if (flash.current) {
-      flash.current.visible = fp > 0.05
-      flash.current.scale.setScalar(0.5 + fp * 0.8)
+      flash.current.visible = fp > 0.04
+      flash.current.scale.setScalar(0.7 + fp * 0.9)
     }
-    if (flashLight.current) flashLight.current.intensity = fp * 14
+    if (flashLight.current) flashLight.current.intensity = fp * 16
   })
 
-  // colt: namlu -X; group rotation.y=-π/2 namluyu -Z'ye çevirir
-  const muzzleLocal = useMemo(
-    () => new THREE.Vector3(-0.52, 0.06, 0),
-    []
-  )
-
   return (
-    <group ref={group}>
-      <pointLight position={[0.4, 0.3, 0.5]} intensity={1.6} distance={3.5} color="#ffe9b0" />
-      <primitive object={prepared.clone} />
-      <group ref={flash} position={muzzleLocal} visible={false}>
-        <mesh>
-          <sphereGeometry args={[0.07, 10, 10]} />
-          <meshBasicMaterial color="#ffdd88" transparent opacity={0.9} />
-        </mesh>
-        <mesh rotation={[0, 0, Math.PI / 4]}>
-          <planeGeometry args={[0.4, 0.4]} />
-          <meshBasicMaterial color="#ffcc66" transparent opacity={0.55} side={THREE.DoubleSide} depthWrite={false} />
-        </mesh>
+    <group ref={yawRef}>
+      <group ref={pitchRef}>
+        <group ref={group} rotation={[0, -Math.PI / 2 - 0.06, 0.02]}>
+          <pointLight position={[0.4, 0.3, 0.5]} intensity={1.6} distance={3.5} color="#ffe9b0" />
+          <primitive object={prepared.clone} />
+          <MuzzleFlash innerRef={flash} />
+          <pointLight ref={flashLight} position={[-0.6, 0.08, 0]} intensity={0} color="#ffcc77" distance={6} />
+        </group>
       </group>
-      <pointLight ref={flashLight} position={[-0.6, 0.08, 0]} intensity={0} color="#ffcc77" distance={6} />
     </group>
   )
 }
@@ -251,12 +303,29 @@ function Spawner({
 }
 
 function RangeEnvironment() {
+  const crates = useMemo(
+    () => [
+      { x: -3.0, z: -4.2, r: 0.4, s: 0.55 },
+      { x: -2.6, z: -3.6, r: -0.2, s: 0.4 },
+      { x: 3.0, z: -9.5, r: 0.9, s: 0.6 },
+      { x: 2.7, z: -10.2, r: 0.2, s: 0.45 },
+    ],
+    []
+  )
+  const barrels = useMemo(
+    () => [
+      { x: 3.0, z: -4.0, c: '#5a3d1e' },
+      { x: -3.0, z: -10.5, c: '#3d4a5a' },
+    ],
+    []
+  )
+
   return (
     <group>
       {/* zemin */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -5]} receiveShadow>
         <planeGeometry args={[24, 26]} />
-        <meshStandardMaterial color="#26262e" metalness={0.15} roughness={0.8} />
+        <meshStandardMaterial color="#2a2a32" metalness={0.15} roughness={0.8} />
       </mesh>
       {/* atış şeritleri */}
       {[-1.8, 0, 1.8].map((x) => (
@@ -265,11 +334,11 @@ function RangeEnvironment() {
           <meshStandardMaterial color="#d4af37" emissive="#8a6d1f" emissiveIntensity={0.55} />
         </mesh>
       ))}
-      {/* yan duvarlar - tam yükseklik */}
+      {/* yan duvarlar */}
       {[-3.6, 3.6].map((x) => (
         <mesh key={x} position={[x, 2.4, -6]}>
           <boxGeometry args={[0.35, 4.8, 18]} />
-          <meshStandardMaterial color="#2c2c36" roughness={0.85} metalness={0.2} />
+          <meshStandardMaterial color="#32323c" roughness={0.85} metalness={0.2} />
         </mesh>
       ))}
       {/* yan duvar panel çizgileri */}
@@ -284,7 +353,7 @@ function RangeEnvironment() {
       {/* tavan */}
       <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 4.8, -6]}>
         <planeGeometry args={[7.6, 18]} />
-        <meshStandardMaterial color="#1a1a21" roughness={0.9} />
+        <meshStandardMaterial color="#1c1c23" roughness={0.9} />
       </mesh>
       {/* tavan ışık bantları */}
       {[-1.9, 1.9].map((x) => (
@@ -296,13 +365,33 @@ function RangeEnvironment() {
       {/* arka duvar */}
       <mesh position={[0, 2.4, -14.8]}>
         <planeGeometry args={[8, 4.8]} />
-        <meshStandardMaterial color="#202028" roughness={0.9} />
+        <meshStandardMaterial color="#23232b" roughness={0.9} />
       </mesh>
-      {/* arka duvar panel dokusu */}
+      {/* arka duvar hedef bölmeleri */}
       {[-2.4, -0.8, 0.8, 2.4].map((x) => (
-        <mesh key={x} position={[x, 1.6, -14.7]}>
+        <group key={x} position={[x, 1.6, -14.7]}>
           <planeGeometry args={[1.2, 2.4]} />
-          <meshStandardMaterial color="#2a2a34" roughness={0.85} metalness={0.15} />
+          <meshStandardMaterial color="#2e2e38" roughness={0.85} metalness={0.15} />
+        </group>
+      ))}
+      {/* mermi sandıkları */}
+      {crates.map((c, i) => (
+        <group key={i} position={[c.x, c.s / 2, c.z]} rotation={[0, c.r, 0]}>
+          <mesh>
+            <boxGeometry args={[c.s, c.s, c.s * 0.7]} />
+            <meshStandardMaterial color="#4a3a24" roughness={0.75} metalness={0.1} />
+          </mesh>
+          <mesh position={[0, 0, c.s * 0.36]}>
+            <boxGeometry args={[c.s * 0.94, c.s * 0.18, 0.02]} />
+            <meshStandardMaterial color="#d4af37" emissive="#6b5518" emissiveIntensity={0.4} />
+          </mesh>
+        </group>
+      ))}
+      {/* variller */}
+      {barrels.map((b, i) => (
+        <mesh key={i} position={[b.x, 0.45, b.z]}>
+          <cylinderGeometry args={[0.28, 0.28, 0.9, 18]} />
+          <meshStandardMaterial color={b.c} roughness={0.6} metalness={0.35} />
         </mesh>
       ))}
     </group>
@@ -334,7 +423,7 @@ export function RangeScene({ active, elapsed, shotSignal, onHit, onMiss }: Range
       style={{ cursor: 'none' }}
     >
       <color attach="background" args={[0x0b0b0e]} />
-      <fog attach="fog" args={[0x0b0b0e, 10, 24]} />
+      <fog attach="fog" args={[0x0b0b0e, 11, 26]} />
 
       <Suspense fallback={null}>
         <Spawner active={active} elapsed={elapsed} setTargets={setTargets} />
