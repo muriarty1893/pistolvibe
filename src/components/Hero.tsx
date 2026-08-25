@@ -1,10 +1,12 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { Crosshair, ShieldCheck, Users } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { RollingText } from '@/components/RollingText'
 import { Reveal } from '@/components/Reveal'
 import Magnet from '@/components/bits/Magnet'
+import { cn } from '@/lib/utils'
 import { playShot } from '@/lib/sfx'
 
 const PistolViewer = lazy(() =>
@@ -80,6 +82,8 @@ function HeroParticles() {
 
 export function Hero() {
   const [shots, setShots] = useState(0)
+  const [marks, setMarks] = useState<{ id: number; x: number; y: number; rot: number }[]>([])
+  const markId = useRef(0)
 
   useEffect(() => {
     try {
@@ -89,11 +93,19 @@ export function Hero() {
     }
   }, [])
 
-  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLElement>) => {
-    const target = e.target as HTMLElement
-    if (target.closest('a, button, input, textarea')) return
+  const fire = useCallback(() => {
     fireSignal.current += 1
     playShot()
+    setMarks((prev) => {
+      const mark = {
+        id: markId.current++,
+        x: 12 + Math.random() * 76,
+        y: 18 + Math.random() * 64,
+        rot: Math.random() * 360,
+      }
+      const next = [...prev, mark]
+      return next.length > 6 ? next.slice(next.length - 6) : next
+    })
     setShots((s) => {
       const next = s + 1
       try {
@@ -106,11 +118,7 @@ export function Hero() {
   }, [])
 
   return (
-    <section
-      id="anasayfa"
-      className="relative overflow-hidden bg-grid"
-      onPointerDown={handlePointerDown}
-    >
+    <section id="anasayfa" className="relative overflow-hidden bg-grid">
       <HeroParticles />
       <div
         className="pointer-events-none absolute inset-0"
@@ -172,12 +180,52 @@ export function Hero() {
               </a>
             </Button>
           </Magnet>
+          <Magnet padding={40} magnetStrength={4}>
+            <div className="relative">
+              <Button
+                size="lg"
+                onClick={fire}
+                className="relative overflow-visible border border-primary/50 bg-primary/10 text-primary transition-colors duration-200 hover:bg-primary/20"
+              >
+                <Crosshair className="h-4 w-4" aria-hidden="true" />
+                <RollingText text="Ateş Et" />
+                {/* mermi izleri */}
+                <AnimatePresence>
+                  {marks.map((mark) => (
+                    <motion.span
+                      key={mark.id}
+                      className="pointer-events-none absolute"
+                      style={{ left: `${mark.x}%`, top: `${mark.y}%`, rotate: mark.rot }}
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ opacity: 0, transition: { duration: 1.2 } }}
+                      transition={{ type: 'spring', stiffness: 600, damping: 18 }}
+                      aria-hidden="true"
+                    >
+                      {/* çatlaklar */}
+                      <span className="absolute left-1/2 top-1/2 h-px w-7 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-transparent via-primary/70 to-transparent" />
+                      <span className="absolute left-1/2 top-1/2 h-px w-7 -translate-x-1/2 -translate-y-1/2 rotate-90 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+                      <span className="absolute left-1/2 top-1/2 h-px w-7 -translate-x-1/2 -translate-y-1/2 rotate-45 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+                      {/* delik */}
+                      <span
+                        className={cn(
+                          'block h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full',
+                          'border border-primary/60 bg-black',
+                          'shadow-[0_0_6px_rgba(212,175,55,0.5),inset_0_1px_2px_rgba(255,255,255,0.15)]'
+                        )}
+                      />
+                    </motion.span>
+                  ))}
+                </AnimatePresence>
+              </Button>
+            </div>
+          </Magnet>
         </Reveal>
 
         <Reveal delay={350}>
           <p className="mt-6 flex items-center justify-center gap-2 text-xs uppercase tracking-[0.25em] text-muted-foreground/80">
             <Crosshair className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-            Sahaya tıkla — tabanca ateş eder
+            Tabanca imleci takip eder — Ateş Et ile tetik çek
           </p>
         </Reveal>
 

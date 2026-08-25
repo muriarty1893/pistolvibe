@@ -69,6 +69,7 @@ export function usePistolModel(url: string, muzzle: 1 | -1, size: number) {
       fireAction = mixer.clipAction(clip)
       fireAction.loop = THREE.LoopOnce
       fireAction.clampWhenFinished = true
+      fireAction.timeScale = 10
     }
 
     return { inner, muzzleTip, mixer, fireAction, length: dims.x * s }
@@ -92,6 +93,11 @@ function PistolMesh({
   const flashLight = useRef<THREE.PointLight>(null)
   const lastFire = useRef(fireSignal?.current ?? 0)
   const flashTimer = useRef(0)
+  const raycaster = useMemo(() => new THREE.Raycaster(), [])
+  const aimPlane = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), [])
+  const aimPoint = useMemo(() => new THREE.Vector3(), [])
+  const gunPos = useMemo(() => new THREE.Vector3(), [])
+  const aimDir = useMemo(() => new THREE.Vector3(), [])
 
   useFrame((state, delta) => {
     mixer?.update(delta)
@@ -110,23 +116,28 @@ function PistolMesh({
     }
 
     if (aim) {
-      if (yawRef.current) {
-        const targetYaw = -state.pointer.x * 0.55
-        yawRef.current.rotation.y = THREE.MathUtils.damp(
-          yawRef.current.rotation.y,
-          targetYaw,
-          6,
-          delta
-        )
-      }
-      if (pitchRef.current) {
-        const targetPitch = state.pointer.y * 0.32
-        pitchRef.current.rotation.x = THREE.MathUtils.damp(
-          pitchRef.current.rotation.x,
-          targetPitch,
-          6,
-          delta
-        )
+      // İmleci gun'un bulunduğu derinlikteki düzleme projeksiyonla, namluyu tam oraya çevir
+      if (yawRef.current && pitchRef.current && group.current) {
+        group.current.getWorldPosition(gunPos)
+        aimPlane.setComponents(0, 0, 1, -gunPos.z)
+        raycaster.setFromCamera(state.pointer, state.camera)
+        if (raycaster.ray.intersectPlane(aimPlane, aimPoint)) {
+          aimDir.copy(aimPoint).sub(gunPos).normalize()
+          const targetYaw = Math.atan2(-aimDir.x, -aimDir.z)
+          const targetPitch = Math.atan2(aimDir.y, -aimDir.z)
+          yawRef.current.rotation.y = THREE.MathUtils.damp(
+            yawRef.current.rotation.y,
+            targetYaw,
+            7,
+            delta
+          )
+          pitchRef.current.rotation.x = THREE.MathUtils.damp(
+            pitchRef.current.rotation.x,
+            targetPitch,
+            7,
+            delta
+          )
+        }
       }
       return
     }
