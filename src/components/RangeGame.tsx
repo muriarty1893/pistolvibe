@@ -205,7 +205,7 @@ export function RangeGame() {
                 />
               </Suspense>
 
-              <CrosshairOverlay />
+              {/* crosshair yok: gun baktığı yöne ateş eder, oyuncu tracer ile düzeltir */}
 
               <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between p-4 font-display">
                 <div className="rounded border border-primary/40 bg-background/80 px-3 py-1.5 text-lg text-primary backdrop-blur-sm">
@@ -317,33 +317,5 @@ export function RangeGame() {
         </div>
       </div>
     </section>
-  )
-}
-
-function CrosshairOverlay() {
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const onMove = (e: PointerEvent) => {
-      const el = ref.current
-      if (!el) return
-      const rect = el.parentElement?.getBoundingClientRect()
-      if (!rect) return
-      el.style.transform = `translate(${e.clientX - rect.left - 16}px, ${e.clientY - rect.top - 16}px)`
-    }
-    window.addEventListener('pointermove', onMove, { passive: true })
-    return () => window.removeEventListener('pointermove', onMove)
-  }, [])
-  return (
-    <div
-      ref={ref}
-      className="pointer-events-none absolute left-0 top-0 h-8 w-8"
-      aria-hidden="true"
-    >
-      <svg viewBox="0 0 32 32" className="h-full w-full text-primary drop-shadow-[0_0_4px_rgba(212,175,55,0.8)]">
-        <circle cx="16" cy="16" r="10" fill="none" stroke="currentColor" strokeWidth="1.4" opacity="0.85" />
-        <circle cx="16" cy="16" r="1.6" fill="currentColor" />
-        <path d="M16 1v6M16 25v6M1 16h6M25 16h6" stroke="currentColor" strokeWidth="1.4" />
-      </svg>
-    </div>
   )
 }

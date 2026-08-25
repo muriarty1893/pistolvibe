@@ -77,7 +77,7 @@ function HeroGuns() {
               ]
             : [
                 {
-                  url: '/models/colt_m1911.glb',
+                  url: '/models/9mm_pistol.glb',
                   muzzle: -1,
                   size: 1.15,
                   position: [0, -0.7, 0],

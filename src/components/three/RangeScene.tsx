@@ -1,5 +1,5 @@
-import { Suspense, useMemo, useRef, useState } from 'react'
-import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
+import { Suspense, useCallback, useMemo, useRef, useState } from 'react'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js'
 import * as THREE from 'three'
@@ -68,11 +68,9 @@ function MuzzleFlash({ innerRef }: { innerRef: React.RefObject<THREE.Group> }) {
 function SteelTarget({
   data,
   active,
-  onHit,
 }: {
   data: TargetData
   active: boolean
-  onHit: (e: ThreeEvent<PointerEvent>) => void
 }) {
   const group = useRef<THREE.Group>(null)
 
@@ -103,7 +101,7 @@ function SteelTarget({
         <meshStandardMaterial color="#2c2c34" metalness={0.6} roughness={0.6} />
       </mesh>
       {/* dikey çelik hedef — kameraya bakar */}
-      <group onPointerDown={onHit} visible={active}>
+      <group visible={active}>
         <mesh rotation={[Math.PI / 2, 0, 0]}>
           <cylinderGeometry args={[0.42, 0.42, 0.06, 32]} />
           <meshStandardMaterial
@@ -168,9 +166,11 @@ function Spark({ data, onDone }: { data: Spark; onDone: (id: number) => void }) 
 function ViewModel({
   shotSignal,
   reloadSignal,
+  onShoot,
 }: {
   shotSignal: { current: number }
   reloadSignal: { current: number }
+  onShoot: (origin: THREE.Vector3, dir: THREE.Vector3) => void
 }) {
   const { scene, animations } = useGLTF('/models/colt1911.glb')
   const yawRef = useRef<THREE.Group>(null)
@@ -208,21 +208,25 @@ function ViewModel({
     const s = 0.62 / maxDim
     clone.scale.setScalar(s)
     clone.position.set(-center.x * s, -center.y * s, -center.z * s)
-    // namlu ucu: -Z ucunda, sürgü üst hattında
+    // namlu ucu: -Z ucunda, namlu hattında (yüksek)
     const muzzleTip = new THREE.Vector3(
       0,
-      ((box.max.y - center.y) * 0.62) * s,
+      ((box.max.y - center.y) * 0.78) * s,
       (box.min.z - center.z) * s
     )
     const mixer = new THREE.AnimationMixer(clone)
     const clip = THREE.AnimationClip.findByName(animations, 'Fire') ?? animations[0]
     // klip fazları: 0.2-2.44s şarjör değişimi (f6-73), 3.5-4.15s tetik+ateş (f106-125)
+    // kök/el kanalları (Dyl, Gils, CORE) atılır — sadece mekanik parçalar kalsın
+    const keep = /(Slide|Hammer|Trig|Magaz|Mag_button|Bullet)/
     const shotClip = THREE.AnimationUtils.subclip(clip, 'Shot', 106, 125, 30)
+    shotClip.tracks = shotClip.tracks.filter((t) => keep.test(t.name))
     const shot = mixer.clipAction(shotClip)
     shot.loop = THREE.LoopOnce
     // clamp yok: animasyon bitince poz otomatik dinlenme pozuna döner
-    shot.timeScale = 6
+    shot.timeScale = 3
     const reloadClip = THREE.AnimationUtils.subclip(clip, 'Reload', 6, 73, 30)
+    reloadClip.tracks = reloadClip.tracks.filter((t) => keep.test(t.name))
     const reload = mixer.clipAction(reloadClip)
     reload.loop = THREE.LoopOnce
     reload.timeScale = 2.1
@@ -232,22 +236,22 @@ function ViewModel({
   useFrame((state, delta) => {
     prepared.mixer.update(delta)
 
-    // imleci takip et (FPS aim)
+    // imleci takip et (orta hassasiyet — gun baktığı yöne ateş eder)
     if (yawRef.current) {
-      const targetYaw = -state.pointer.x * 0.14
+      const targetYaw = -state.pointer.x * 0.6
       yawRef.current.rotation.y = THREE.MathUtils.damp(
         yawRef.current.rotation.y,
         targetYaw,
-        8,
+        6,
         delta
       )
     }
     if (pitchRef.current) {
-      const targetPitch = state.pointer.y * 0.1
+      const targetPitch = state.pointer.y * 0.35
       pitchRef.current.rotation.x = THREE.MathUtils.damp(
         pitchRef.current.rotation.x,
         targetPitch,
-        8,
+        6,
         delta
       )
     }
@@ -263,6 +267,17 @@ function ViewModel({
       flashPower.current = 1
       kick.current = 0.6
       if (flash.current) flash.current.rotation.z = Math.random() * Math.PI * 2
+
+      // mermi gun'un BAKTIĞI yönde gider — imleç noktasına değil
+      if (group.current) {
+        const origin = prepared.muzzleTip.clone()
+        group.current.localToWorld(origin)
+        const ahead = prepared.muzzleTip.clone()
+        ahead.z -= 12
+        group.current.localToWorld(ahead)
+        const dir = ahead.sub(origin).normalize()
+        onShoot(origin, dir)
+      }
     }
     kick.current = THREE.MathUtils.damp(kick.current, 0, 12, delta)
     flashPower.current = THREE.MathUtils.damp(flashPower.current, 0, 30, delta)
@@ -366,16 +381,43 @@ function Spawner({
   return null
 }
 
+/** Kenney CC0 prop: beyaz gelir, renk atayıp normalize ederiz */
+function ColoredProp({
+  url,
+  color,
+  metalness = 0.25,
+  roughness = 0.7,
+  scale = 1,
+}: {
+  url: string
+  color: string
+  metalness?: number
+  roughness?: number
+  scale?: number
+}) {
+  const { scene } = useGLTF(url)
+  const model = useMemo(() => {
+    const c = skeletonClone(scene)
+    c.traverse((child) => {
+      const mesh = child as THREE.Mesh
+      if (mesh.isMesh) {
+        const m = (mesh.material as THREE.MeshStandardMaterial).clone()
+        m.color = new THREE.Color(color)
+        m.metalness = metalness
+        m.roughness = roughness
+        mesh.material = m
+      }
+    })
+    const box = new THREE.Box3().setFromObject(c)
+    const size = box.getSize(new THREE.Vector3())
+    const s = scale / Math.max(size.x, size.y, size.z, 0.001)
+    c.scale.setScalar(s)
+    return c
+  }, [scene, color, metalness, roughness, scale])
+  return <primitive object={model} />
+}
+
 function RangeEnvironment() {
-  const crates = useMemo(
-    () => [
-      { x: -3.0, z: -4.2, r: 0.4, s: 0.55 },
-      { x: -2.6, z: -3.6, r: -0.2, s: 0.4 },
-      { x: 3.0, z: -9.5, r: 0.9, s: 0.6 },
-      { x: 2.7, z: -10.2, r: 0.2, s: 0.45 },
-    ],
-    []
-  )
   const barrels = useMemo(
     () => [
       { x: 3.0, z: -4.0, c: '#5a3d1e' },
@@ -438,19 +480,29 @@ function RangeEnvironment() {
           <meshStandardMaterial color="#2e2e38" roughness={0.85} metalness={0.15} />
         </group>
       ))}
-      {/* mermi sandıkları */}
-      {crates.map((c, i) => (
-        <group key={i} position={[c.x, c.s / 2, c.z]} rotation={[0, c.r, 0]}>
-          <mesh>
-            <boxGeometry args={[c.s, c.s, c.s * 0.7]} />
-            <meshStandardMaterial color="#4a3a24" roughness={0.75} metalness={0.1} />
-          </mesh>
-          <mesh position={[0, 0, c.s * 0.36]}>
-            <boxGeometry args={[c.s * 0.94, c.s * 0.18, 0.02]} />
-            <meshStandardMaterial color="#d4af37" emissive="#6b5518" emissiveIntensity={0.4} />
-          </mesh>
-        </group>
-      ))}
+      {/* Kenney CC0 sandıklar — askeri yeşil tonları */}
+      <group position={[-2.9, 0, -4.2]} rotation={[0, 0.4, 0]}>
+        <ColoredProp url="/models/props/crate-wide.glb" color="#4a5240" scale={0.62} />
+      </group>
+      <group position={[-2.55, 0.34, -3.6]} rotation={[0, -0.25, 0]}>
+        <ColoredProp url="/models/props/crate-medium.glb" color="#3e4636" scale={0.42} />
+      </group>
+      <group position={[2.9, 0, -9.5]} rotation={[0, 0.9, 0]}>
+        <ColoredProp url="/models/props/crate-wide.glb" color="#4a5240" scale={0.66} />
+      </group>
+      <group position={[2.6, 0, -10.3]} rotation={[0, 0.15, 0]}>
+        <ColoredProp url="/models/props/crate-medium.glb" color="#52422c" scale={0.48} />
+      </group>
+      {/* arka duvar dekor hedefleri (Kenney) */}
+      <group position={[-2.4, 1.7, -14.55]} rotation={[0, 0, 0]}>
+        <ColoredProp url="/models/props/target-detail.glb" color="#d8d8e2" metalness={0.5} roughness={0.4} scale={0.85} />
+      </group>
+      <group position={[0.8, 1.7, -14.55]}>
+        <ColoredProp url="/models/props/target-large.glb" color="#c9c9d4" metalness={0.5} roughness={0.4} scale={0.9} />
+      </group>
+      <group position={[2.4, 1.7, -14.55]}>
+        <ColoredProp url="/models/props/target-detail.glb" color="#b8b8c4" metalness={0.5} roughness={0.4} scale={0.7} />
+      </group>
       {/* variller */}
       {barrels.map((b, i) => (
         <mesh key={i} position={[b.x, 0.45, b.z]}>
@@ -475,22 +527,114 @@ function CameraFit() {
   return null
 }
 
-export function RangeScene({ active, elapsed, shotSignal, reloadSignal, onHit, onMiss }: RangeSceneProps) {
+/** İzli mermi çizgisi: kısa ömürlü, additive */
+interface TracerData {
+  id: number
+  from: THREE.Vector3
+  to: THREE.Vector3
+  born: number
+}
+
+function Tracer({ data, onDone }: { data: TracerData; onDone: (id: number) => void }) {
+  const lineObj = useMemo(() => {
+    const geom = new THREE.BufferGeometry().setFromPoints([data.from, data.to])
+    const mat = new THREE.LineBasicMaterial({
+      color: '#ffd777',
+      transparent: true,
+      opacity: 0.9,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    })
+    return new THREE.Line(geom, mat)
+  }, [data])
+
+  useFrame(() => {
+    const l = (performance.now() / 1000 - data.born) / 0.25
+    if (l >= 1) {
+      onDone(data.id)
+      return
+    }
+    const mat = lineObj.material as THREE.LineBasicMaterial
+    mat.opacity = 0.9 * (1 - l)
+  })
+
+  return <primitive object={lineObj} />
+}
+
+function raySphere(
+  origin: THREE.Vector3,
+  dir: THREE.Vector3,
+  center: THREE.Vector3,
+  r: number
+): number | null {
+  const oc = center.clone().sub(origin)
+  const t = oc.dot(dir)
+  if (t < 0) return null
+  const d2 = oc.lengthSq() - t * t
+  if (d2 > r * r) return null
+  return t - Math.sqrt(r * r - d2)
+}
+
+export function RangeScene({
+  active,
+  elapsed,
+  shotSignal,
+  reloadSignal,
+  onHit,
+  onMiss,
+}: RangeSceneProps) {
   const [targets, setTargets] = useState<TargetData[]>([])
   const [sparks, setSparks] = useState<Spark[]>([])
+  const [tracers, setTracers] = useState<TracerData[]>([])
+  const targetsRef = useRef<TargetData[]>([])
+  targetsRef.current = targets
 
-  const handleHit = (target: TargetData) => (e: ThreeEvent<PointerEvent>) => {
-    e.stopPropagation()
-    if (!active) return
-    setTargets((prev) => prev.filter((t) => t.id !== target.id))
-    setSparks((prev) => [
-      ...prev.slice(-5),
-      { id: nextId++, x: target.x, y: target.y, z: target.z + 0.1, born: performance.now() / 1000 },
-    ])
-    onHit()
-  }
+  // atış: gun'un baktığı yönde raycast — hedef küre çarpışması
+  const handleShoot = useCallback(
+    (origin: THREE.Vector3, dir: THREE.Vector3) => {
+      if (!active) return
+      let best: { id: number; t: number; pos: THREE.Vector3 } | null = null
+      for (const t of targetsRef.current) {
+        const tt = raySphere(origin, dir, new THREE.Vector3(t.x, t.y, t.z), 0.45)
+        if (tt !== null && (!best || tt < best.t)) {
+          best = { id: t.id, t: tt, pos: new THREE.Vector3(t.x, t.y, t.z) }
+        }
+      }
+
+      if (best) {
+        setTargets((prev) => prev.filter((x) => x.id !== best!.id))
+        setSparks((prev) => [
+          ...prev.slice(-5),
+          {
+            id: nextId++,
+            x: best!.pos.x,
+            y: best!.pos.y,
+            z: best!.pos.z + 0.1,
+            born: performance.now() / 1000,
+          },
+        ])
+        setTracers((prev) => [
+          ...prev.slice(-6),
+          { id: nextId++, from: origin.clone(), to: best!.pos.clone(), born: performance.now() / 1000 },
+        ])
+        onHit()
+      } else {
+        const tPlane = (-14.6 - origin.z) / dir.z
+        const point = origin
+          .clone()
+          .add(dir.clone().multiplyScalar(Math.max(Math.min(tPlane, 20), 6)))
+        setTracers((prev) => [
+          ...prev.slice(-6),
+          { id: nextId++, from: origin.clone(), to: point, born: performance.now() / 1000 },
+        ])
+        onMiss()
+      }
+    },
+    [active, onHit, onMiss]
+  )
 
   const removeSpark = (id: number) => setSparks((prev) => prev.filter((s) => s.id !== id))
+  const removeTracer = (id: number) => setTracers((prev) => prev.filter((t) => t.id !== id))
 
   return (
     <Canvas
@@ -510,24 +654,21 @@ export function RangeScene({ active, elapsed, shotSignal, reloadSignal, onHit, o
         <directionalLight position={[-5, 3, -4]} intensity={1} color="#d4af37" />
         <pointLight position={[0, 4.2, -6]} intensity={30} color="#ffe2a0" distance={16} />
 
-        <ViewModel shotSignal={shotSignal} reloadSignal={reloadSignal} />
+        <ViewModel
+          shotSignal={shotSignal}
+          reloadSignal={reloadSignal}
+          onShoot={handleShoot}
+        />
         <RangeEnvironment />
 
-        <mesh
-          position={[0, 2, -14.6]}
-          onPointerDown={() => {
-            if (active) onMiss()
-          }}
-        >
-          <planeGeometry args={[8, 5]} />
-          <meshBasicMaterial visible={false} />
-        </mesh>
-
         {targets.map((t) => (
-          <SteelTarget key={t.id} data={t} active={active} onHit={handleHit(t)} />
+          <SteelTarget key={t.id} data={t} active={active} />
         ))}
         {sparks.map((s) => (
           <Spark key={s.id} data={s} onDone={removeSpark} />
+        ))}
+        {tracers.map((t) => (
+          <Tracer key={t.id} data={t} onDone={removeTracer} />
         ))}
       </Suspense>
     </Canvas>
