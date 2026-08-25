@@ -303,14 +303,6 @@ export function DualPistolViewer({ guns, className }: DualPistolViewerProps) {
               <CinematicGun key={i} spec={spec} />
             ))}
           </ParallaxRig>
-          <ContactShadows
-            position={[0, -1.5, 0]}
-            opacity={0.4}
-            scale={10}
-            blur={2.8}
-            far={2.5}
-            color="#d4af37"
-          />
         </Suspense>
       </Canvas>
     </div>
@@ -373,14 +365,6 @@ export function PistolViewer({
               autoRotate={autoRotate}
             />
           </Float>
-          <ContactShadows
-            position={[0, -1.35, 0]}
-            opacity={0.55}
-            scale={7}
-            blur={2.6}
-            far={2.5}
-            color="#d4af37"
-          />
           </group>
         </Suspense>
       </Canvas>

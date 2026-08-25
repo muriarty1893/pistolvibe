@@ -1,16 +1,7 @@
-import { ExternalLink } from 'lucide-react'
+import { Mail } from 'lucide-react'
 
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { RollingText } from '@/components/RollingText'
-import { Card, CardContent } from '@/components/ui/card'
 import { SectionHeading } from '@/components/SectionHeading'
 import { Reveal } from '@/components/Reveal'
-
-const PISTOLS = [
-  { src: '/assets/sponsors_pistol_pic-nobg.png', name: 'NOVRITSCH SSP5 6" GBB' },
-  { src: '/assets/glock18c-nobg.png', name: 'Glock 17 Gen 4' },
-]
 
 export function Sponsors() {
   return (
@@ -18,52 +9,34 @@ export function Sponsors() {
       <div className="container mx-auto px-6">
         <SectionHeading
           badge="Sponsorlar"
-          title="Sponsorlarımız"
-          description="Bizi destekleyen, sahadaki performansımıza güç katan markalar."
+          title="Sponsor & İşbirliği"
+          description="Markanızı sahamıza taşımak ya da birlikte çalışmak için bize yazın."
         />
 
         <Reveal>
-          <Card className="mx-auto max-w-4xl overflow-hidden border-primary/30 bg-card/80">
-            <CardContent className="p-6 sm:p-10">
-              <div className="text-center">
-                <Badge>Resmi Sponsor</Badge>
-                <h3 className="mt-4 font-display text-4xl uppercase tracking-wide text-gold-gradient sm:text-5xl">
-                  Novritsch
-                </h3>
-                <p className="mx-auto mt-4 max-w-xl text-sm text-muted-foreground sm:text-base">
-                  Ekipman desteği için Novritsch&apos;e teşekkür ederiz. SSP-5 gibi üst düzey tabancalarıyla
-                  sahadaki performansımızın en büyük destekçisi.
-                </p>
-              </div>
-
-              <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2">
-                {PISTOLS.map((pistol) => (
-                  <div
-                    key={pistol.name}
-                    className="group rounded-lg border border-border bg-black/40 p-8 transition-colors duration-200 hover:border-primary/50"
-                  >
-                    <img
-                      src={pistol.src}
-                      alt={`${pistol.name} airsoft tabancası`}
-                      className="mx-auto max-h-48 w-full object-contain transition-[filter] duration-300 group-hover:gold-glow-sm"
-                    />
-                    <p className="mt-6 text-center font-display text-sm uppercase tracking-widest text-foreground">
-                      {pistol.name}
-                    </p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-10 text-center">
-                <Button asChild variant="outline">
-                  <a href="https://www.novritsch.com" target="_blank" rel="noopener noreferrer">
-                    <RollingText text="novritsch.com'u Ziyaret Et" />
-                    <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                  </a>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="relative mx-auto max-w-3xl overflow-hidden rounded-xl border border-primary/30 bg-card/60 px-6 py-16 text-center backdrop-blur-sm">
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background:
+                  'radial-gradient(ellipse 60% 60% at 50% 50%, rgba(212,175,55,0.1), transparent 70%)',
+              }}
+            />
+            <p className="relative font-display text-4xl uppercase tracking-wide text-gold-gradient sm:text-6xl">
+              #İşbirliği
+            </p>
+            <p className="relative mx-auto mt-6 max-w-md text-sm text-muted-foreground sm:text-base">
+              Sponsorluk ve işbirliği teklifleri için doğrudan e-posta gönderin — en kısa sürede
+              dönüş yapıyoruz.
+            </p>
+            <a
+              href="mailto:nezihkarakoc01@gmail.com"
+              className="relative mt-8 inline-flex cursor-pointer items-center gap-3 rounded-lg border border-primary/50 bg-primary/10 px-6 py-3 font-display text-sm uppercase tracking-widest text-primary transition-colors duration-200 hover:bg-primary/20"
+            >
+              <Mail className="h-4 w-4" aria-hidden="true" />
+              nezihkarakoc01@gmail.com
+            </a>
+          </div>
         </Reveal>
       </div>
     </section>

@@ -182,6 +182,7 @@ function ViewModel({
   const lastReload = useRef(reloadSignal.current)
   const flashPower = useRef(0)
   const kick = useRef(0)
+  
 
   const prepared = useMemo(() => {
     const clone = skeletonClone(scene)
@@ -207,20 +208,20 @@ function ViewModel({
     const s = 0.62 / maxDim
     clone.scale.setScalar(s)
     clone.position.set(-center.x * s, -center.y * s, -center.z * s)
-    // namlu ucu: -Z ucunda, üst yarıda
+    // namlu ucu: -Z ucunda, sürgü üst hattında
     const muzzleTip = new THREE.Vector3(
       0,
-      ((box.max.y - center.y) * 0.55) * s,
+      ((box.max.y - center.y) * 0.62) * s,
       (box.min.z - center.z) * s
     )
     const mixer = new THREE.AnimationMixer(clone)
     const clip = THREE.AnimationClip.findByName(animations, 'Fire') ?? animations[0]
-    // klip fazları: 0.2-2.44s şarjör değişimi (f6-73), 2.66-4.15s horoz+ateş (f80-125)
-    const shotClip = THREE.AnimationUtils.subclip(clip, 'Shot', 80, 125, 30)
+    // klip fazları: 0.2-2.44s şarjör değişimi (f6-73), 3.5-4.15s tetik+ateş (f106-125)
+    const shotClip = THREE.AnimationUtils.subclip(clip, 'Shot', 106, 125, 30)
     const shot = mixer.clipAction(shotClip)
     shot.loop = THREE.LoopOnce
     // clamp yok: animasyon bitince poz otomatik dinlenme pozuna döner
-    shot.timeScale = 10
+    shot.timeScale = 6
     const reloadClip = THREE.AnimationUtils.subclip(clip, 'Reload', 6, 73, 30)
     const reload = mixer.clipAction(reloadClip)
     reload.loop = THREE.LoopOnce
@@ -260,11 +261,23 @@ function ViewModel({
       lastShot.current = shotSignal.current
       prepared.shot.reset().play()
       flashPower.current = 1
-      kick.current = 1
+      kick.current = 0.6
       if (flash.current) flash.current.rotation.z = Math.random() * Math.PI * 2
     }
     kick.current = THREE.MathUtils.damp(kick.current, 0, 12, delta)
     flashPower.current = THREE.MathUtils.damp(flashPower.current, 0, 30, delta)
+
+    // flaş pozisyonu: namlu ucu (group uzayında sabit)
+    if (flash.current) {
+      flash.current.position.copy(prepared.muzzleTip)
+    }
+    if (flashLight.current) {
+      flashLight.current.position.set(
+        prepared.muzzleTip.x,
+        prepared.muzzleTip.y + 0.04,
+        prepared.muzzleTip.z
+      )
+    }
 
     // mobil (dikey) yerleşim: gun ortada, biraz küçük ve aşağıda
     const portrait = state.size.width < 768
@@ -277,13 +290,13 @@ function ViewModel({
       group.current.position.x = THREE.MathUtils.damp(group.current.position.x, baseX, 6, delta)
       group.current.position.y = THREE.MathUtils.damp(
         group.current.position.y,
-        baseY + kick.current * 0.025,
+        baseY + kick.current * 0.04,
         6,
         delta
       )
       group.current.position.z = THREE.MathUtils.damp(
         group.current.position.z,
-        baseZ + kick.current * 0.1,
+        baseZ + kick.current * 0.06,
         6,
         delta
       )
@@ -304,12 +317,9 @@ function ViewModel({
         <group ref={group} position={[0.66, 0.94, 2.55]} rotation={[0, 0.05, 0.02]}>
           <pointLight position={[0.4, 0.3, 0.5]} intensity={1.6} distance={3.5} color="#ffe9b0" />
           <primitive object={prepared.clone} />
-          <group position={prepared.muzzleTip}>
-            <MuzzleFlash innerRef={flash} />
-          </group>
+          <MuzzleFlash innerRef={flash} />
           <pointLight
             ref={flashLight}
-            position={[prepared.muzzleTip.x, prepared.muzzleTip.y + 0.05, prepared.muzzleTip.z]}
             intensity={0}
             color="#ffcc77"
             distance={6}
