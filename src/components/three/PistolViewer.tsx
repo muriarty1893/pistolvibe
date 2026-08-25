@@ -230,22 +230,26 @@ interface CinematicGunSpec {
   spin: number
   /** Süzülme fazı kaydırması */
   phase?: number
+  /** Sabit diyagonal eğim (radyan, rotation.z) */
+  tilt?: number
 }
 
 function CinematicGun({ spec }: { spec: CinematicGunSpec }) {
   const { inner } = usePistolModel(spec.url, spec.muzzle, spec.size)
-  const ref = useRef<THREE.Group>(null)
+  const spinRef = useRef<THREE.Group>(null)
 
   useFrame((state, delta) => {
-    if (!ref.current) return
-    ref.current.rotation.y += delta * spec.spin
-    ref.current.position.y =
+    if (!spinRef.current) return
+    spinRef.current.rotation.y += delta * spec.spin
+    spinRef.current.position.y =
       spec.position[1] + Math.sin(state.clock.elapsedTime * 0.7 + (spec.phase ?? 0)) * 0.14
   })
 
   return (
-    <group ref={ref} position={spec.position}>
-      <primitive object={inner} />
+    <group position={[spec.position[0], 0, spec.position[2]]} rotation={[0, 0, spec.tilt ?? 0]}>
+      <group ref={spinRef} position={[0, spec.position[1], 0]}>
+        <primitive object={inner} />
+      </group>
     </group>
   )
 }

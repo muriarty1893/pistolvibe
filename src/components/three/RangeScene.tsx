@@ -1,5 +1,5 @@
 import { Suspense, useMemo, useRef, useState } from 'react'
-import { Canvas, useFrame, type ThreeEvent } from '@react-three/fiber'
+import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js'
 import * as THREE from 'three'
@@ -172,7 +172,7 @@ function ViewModel({
   shotSignal: { current: number }
   reloadSignal: { current: number }
 }) {
-  const { scene, animations } = useGLTF('/models/colt_m1911.glb')
+  const { scene, animations } = useGLTF('/models/colt1911.glb')
   const yawRef = useRef<THREE.Group>(null)
   const pitchRef = useRef<THREE.Group>(null)
   const group = useRef<THREE.Group>(null)
@@ -201,24 +201,31 @@ function ViewModel({
     })
     const box = new THREE.Box3().setFromObject(clone)
     const center = box.getCenter(new THREE.Vector3())
-    const maxDim = Math.max(box.getSize(new THREE.Vector3()).x, 1)
+    const dims = box.getSize(new THREE.Vector3())
+    // colt1911: uzun eksen Z, namlu -Z ucunda
+    const maxDim = Math.max(dims.z, 1)
     const s = 0.62 / maxDim
     clone.scale.setScalar(s)
     clone.position.set(-center.x * s, -center.y * s, -center.z * s)
+    // namlu ucu: -Z ucunda, üst yarıda
+    const muzzleTip = new THREE.Vector3(
+      0,
+      ((box.max.y - center.y) * 0.55) * s,
+      (box.min.z - center.z) * s
+    )
     const mixer = new THREE.AnimationMixer(clone)
     const clip = THREE.AnimationClip.findByName(animations, 'Fire') ?? animations[0]
-    // klip iki faz: 0-2.0s kızak çekme (rack), 3.3-4.8s atış (shot)
-    const shotClip = THREE.AnimationUtils.subclip(clip, 'Shot', 99, 144, 30)
+    // klip fazları: 0.2-2.44s şarjör değişimi (f6-73), 2.66-4.15s horoz+ateş (f80-125)
+    const shotClip = THREE.AnimationUtils.subclip(clip, 'Shot', 80, 125, 30)
     const shot = mixer.clipAction(shotClip)
     shot.loop = THREE.LoopOnce
-    shot.clampWhenFinished = true
+    // clamp yok: animasyon bitince poz otomatik dinlenme pozuna döner
     shot.timeScale = 10
-    const rackClip = THREE.AnimationUtils.subclip(clip, 'Rack', 0, 60, 30)
-    const rack = mixer.clipAction(rackClip)
-    rack.loop = THREE.LoopOnce
-    rack.clampWhenFinished = true
-    rack.timeScale = 2
-    return { clone, mixer, shot, rack }
+    const reloadClip = THREE.AnimationUtils.subclip(clip, 'Reload', 6, 73, 30)
+    const reload = mixer.clipAction(reloadClip)
+    reload.loop = THREE.LoopOnce
+    reload.timeScale = 2.1
+    return { clone, mixer, shot, reload, muzzleTip }
   }, [scene, animations])
 
   useFrame((state, delta) => {
@@ -246,7 +253,7 @@ function ViewModel({
 
     if (reloadSignal.current !== lastReload.current) {
       lastReload.current = reloadSignal.current
-      prepared.rack.reset().play()
+      prepared.reload.reset().play()
     }
 
     if (shotSignal.current !== lastShot.current) {
@@ -259,10 +266,29 @@ function ViewModel({
     kick.current = THREE.MathUtils.damp(kick.current, 0, 12, delta)
     flashPower.current = THREE.MathUtils.damp(flashPower.current, 0, 30, delta)
 
+    // mobil (dikey) yerleşim: gun ortada, biraz küçük ve aşağıda
+    const portrait = state.size.width < 768
+    const baseX = portrait ? 0 : 0.66
+    const baseY = portrait ? 0.78 : 0.94
+    const baseZ = portrait ? 2.7 : 2.55
+    const baseScale = portrait ? 0.85 : 1
+
     if (group.current) {
-      group.current.position.set(0.66, 0.94, 2.55)
-      group.current.position.z += kick.current * 0.1
-      group.current.position.y += kick.current * 0.025
+      group.current.position.x = THREE.MathUtils.damp(group.current.position.x, baseX, 6, delta)
+      group.current.position.y = THREE.MathUtils.damp(
+        group.current.position.y,
+        baseY + kick.current * 0.025,
+        6,
+        delta
+      )
+      group.current.position.z = THREE.MathUtils.damp(
+        group.current.position.z,
+        baseZ + kick.current * 0.1,
+        6,
+        delta
+      )
+      const sc = THREE.MathUtils.damp(group.current.scale.x, baseScale, 6, delta)
+      group.current.scale.setScalar(sc)
     }
     const fp = Math.max(flashPower.current, 0)
     if (flash.current) {
@@ -275,11 +301,19 @@ function ViewModel({
   return (
     <group ref={yawRef}>
       <group ref={pitchRef}>
-        <group ref={group} rotation={[0, -Math.PI / 2 - 0.06, 0.02]}>
+        <group ref={group} position={[0.66, 0.94, 2.55]} rotation={[0, 0.05, 0.02]}>
           <pointLight position={[0.4, 0.3, 0.5]} intensity={1.6} distance={3.5} color="#ffe9b0" />
           <primitive object={prepared.clone} />
-          <MuzzleFlash innerRef={flash} />
-          <pointLight ref={flashLight} position={[-0.6, 0.08, 0]} intensity={0} color="#ffcc77" distance={6} />
+          <group position={prepared.muzzleTip}>
+            <MuzzleFlash innerRef={flash} />
+          </group>
+          <pointLight
+            ref={flashLight}
+            position={[prepared.muzzleTip.x, prepared.muzzleTip.y + 0.05, prepared.muzzleTip.z]}
+            intensity={0}
+            color="#ffcc77"
+            distance={6}
+          />
         </group>
       </group>
     </group>
@@ -418,6 +452,19 @@ function RangeEnvironment() {
   )
 }
 
+/** Dikey ekranda kamerayı geri alır, sahne "uzun ince" görünür */
+function CameraFit() {
+  const camera = useThree((s) => s.camera)
+  const width = useThree((s) => s.size.width)
+  useFrame((_, delta) => {
+    const portrait = width < 768
+    const targetZ = portrait ? 4.6 : 3.4
+    camera.position.z = THREE.MathUtils.damp(camera.position.z, targetZ, 5, delta)
+    camera.updateProjectionMatrix()
+  })
+  return null
+}
+
 export function RangeScene({ active, elapsed, shotSignal, reloadSignal, onHit, onMiss }: RangeSceneProps) {
   const [targets, setTargets] = useState<TargetData[]>([])
   const [sparks, setSparks] = useState<Spark[]>([])
@@ -446,6 +493,7 @@ export function RangeScene({ active, elapsed, shotSignal, reloadSignal, onHit, o
       <fog attach="fog" args={[0x0b0b0e, 11, 26]} />
 
       <Suspense fallback={null}>
+        <CameraFit />
         <Spawner active={active} elapsed={elapsed} setTargets={setTargets} />
         <hemisphereLight intensity={0.55} groundColor={0x1a1a20} />
         <directionalLight position={[4, 6, 2]} intensity={1.6} color="#fff1cc" />

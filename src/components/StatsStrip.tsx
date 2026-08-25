@@ -10,7 +10,7 @@ const STATS = [
   { icon: Users, value: 25, suffix: '+', label: 'Aktif Üye' },
   { icon: Swords, value: 40, suffix: '+', label: 'Oynanan Maç' },
   { icon: Crosshair, value: 12500, suffix: '+', label: 'Atılan Airsoft Mermisi', separator: '.' },
-  { icon: CalendarDays, value: 2021, suffix: '', label: "Kuruluş Yılı", from: 1990 },
+  { icon: CalendarDays, value: 2026, suffix: '', label: "Kuruluş Yılı", from: 1990 },
 ]
 
 export function StatsStrip() {

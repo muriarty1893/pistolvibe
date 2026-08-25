@@ -190,7 +190,7 @@ export function RangeGame() {
 
         <div
           ref={containerRef}
-          className="relative mx-auto h-[480px] max-w-5xl select-none overflow-hidden rounded-xl border border-border bg-[#0b0b0e] sm:h-[560px]"
+          className="relative mx-auto h-[600px] w-full max-w-md select-none overflow-hidden rounded-xl border border-border bg-[#0b0b0e] sm:h-[560px] sm:max-w-5xl"
         >
           {phase === 'playing' && (
             <div onPointerDown={shoot} className="absolute inset-0 cursor-none">

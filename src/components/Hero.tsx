@@ -60,17 +60,19 @@ function HeroGuns() {
                   url: '/models/colt_m1911.glb',
                   muzzle: -1,
                   size: 1.55,
-                  position: [-2.15, -0.75, 0],
+                  position: [-1.75, -0.7, 0],
                   spin: 0.32,
                   phase: 0,
+                  tilt: -0.5,
                 },
                 {
                   url: '/models/9mm_pistol.glb',
                   muzzle: -1,
                   size: 1.55,
-                  position: [2.15, -0.75, 0],
+                  position: [1.75, -0.7, 0],
                   spin: -0.32,
                   phase: 2.1,
+                  tilt: 0.5,
                 },
               ]
             : [
@@ -81,6 +83,7 @@ function HeroGuns() {
                   position: [0, -0.7, 0],
                   spin: 0.3,
                   phase: 0,
+                  tilt: -0.5,
                 },
               ]
         }
@@ -105,6 +108,9 @@ function HeroParticles() {
           speed={0.08}
           particleColors={['#d4af37', '#f5d876', '#8a6d1f']}
           moveParticlesOnHover
+          particleBaseSize={30}
+          sizeRandomness={0.6}
+          alphaParticles
         />
       </Suspense>
     </div>
