@@ -1,4 +1,3 @@
-import { Suspense, lazy } from 'react'
 import { ExternalLink } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
@@ -8,19 +7,9 @@ import { Card, CardContent } from '@/components/ui/card'
 import { SectionHeading } from '@/components/SectionHeading'
 import { Reveal } from '@/components/Reveal'
 
-const LogoLoop = lazy(() => import('@/components/bits/LogoLoop'))
-
 const PISTOLS = [
-  { src: '/assets/sponsors_pistol_pic-nobg.png', name: 'Novritsch SSP-5' },
-  { src: '/assets/glock18c-nobg.png', name: 'Glock 18C' },
-]
-
-const LOGO_LOOP_ITEMS = [
-  { node: <span className="font-display text-xl uppercase tracking-widest text-foreground">Novritsch</span>, title: 'Novritsch' },
-  { src: '/assets/sponsors_pistol_pic-nobg.png', alt: 'Novritsch SSP-5', height: 40 },
-  { node: <span className="font-display text-xl uppercase tracking-widest text-muted-foreground">Glock</span>, title: 'Glock' },
-  { src: '/assets/glock18c-nobg.png', alt: 'Glock 18C', height: 40 },
-  { node: <span className="font-display text-xl uppercase tracking-widest text-muted-foreground">A.T.A Pistol Team</span>, title: 'A.T.A Pistol Team' },
+  { src: '/assets/sponsors_pistol_pic-nobg.png', name: 'NOVRITSCH SSP5 6" GBB' },
+  { src: '/assets/glock18c-nobg.png', name: 'Glock 17 Gen 4' },
 ]
 
 export function Sponsors() {
@@ -75,22 +64,6 @@ export function Sponsors() {
               </div>
             </CardContent>
           </Card>
-        </Reveal>
-
-        <Reveal delay={200} className="mt-12">
-          <Suspense fallback={null}>
-            <LogoLoop
-              logos={LOGO_LOOP_ITEMS}
-              speed={40}
-              logoHeight={44}
-              gap={72}
-              pauseOnHover
-              scaleOnHover
-              fadeOut
-              fadeOutColor="#0a0a0a"
-              ariaLabel="Ekipman markaları"
-            />
-          </Suspense>
         </Reveal>
       </div>
     </section>

@@ -62,9 +62,19 @@ export default {
           from: { opacity: '0', transform: 'translateY(24px)' },
           to: { opacity: '1', transform: 'translateY(0)' },
         },
+        marquee: {
+          from: { transform: 'translateX(0)' },
+          to: { transform: 'translateX(calc(-100% - var(--gap)))' },
+        },
+        'marquee-vertical': {
+          from: { transform: 'translateY(0)' },
+          to: { transform: 'translateY(calc(-100% - var(--gap)))' },
+        },
       },
       animation: {
         'fade-up': 'fade-up 0.6s ease-out forwards',
+        marquee: 'marquee var(--duration, 40s) infinite linear',
+        'marquee-vertical': 'marquee-vertical var(--duration, 40s) infinite linear',
       },
     },
   },

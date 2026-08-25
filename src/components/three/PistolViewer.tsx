@@ -13,6 +13,8 @@ export interface PistolMeshConfig {
   animated?: boolean
   /** Ateş sinyali: değer değişince bir atış tetiklenir */
   fireSignal?: { current: number }
+  /** Reload sinyali: değer değişince kızak çekme animasyonu oynar */
+  reloadSignal?: { current: number }
   /** Mouse'u takip ederek nişan al (hero) */
   aim?: boolean
   /** Normalleştirilmiş model uzunluğu (world unit) */
@@ -62,17 +64,24 @@ export function usePistolModel(url: string, muzzle: 1 | -1, size: number) {
     )
 
     let mixer: THREE.AnimationMixer | null = null
-    let fireAction: THREE.AnimationAction | null = null
+    let shotAction: THREE.AnimationAction | null = null
+    let rackAction: THREE.AnimationAction | null = null
     if (animations.length > 0) {
       mixer = new THREE.AnimationMixer(clone)
       const clip = THREE.AnimationClip.findByName(animations, 'Fire') ?? animations[0]
-      fireAction = mixer.clipAction(clip)
-      fireAction.loop = THREE.LoopOnce
-      fireAction.clampWhenFinished = true
-      fireAction.timeScale = 10
+      // GLB'deki klip iki faz içerir: 0-2.0s kızak çekme (rack), 3.3-4.8s atış (shot)
+      const shotClip = THREE.AnimationUtils.subclip(clip, 'Shot', 99, 144, 30)
+      shotAction = mixer.clipAction(shotClip)
+      shotAction.loop = THREE.LoopOnce
+      shotAction.clampWhenFinished = true
+      shotAction.timeScale = 10
+      const rackClip = THREE.AnimationUtils.subclip(clip, 'Rack', 0, 60, 30)
+      rackAction = mixer.clipAction(rackClip)
+      rackAction.loop = THREE.LoopOnce
+      rackAction.clampWhenFinished = true
     }
 
-    return { inner, muzzleTip, mixer, fireAction, length: dims.x * s }
+    return { inner, muzzleTip, mixer, shotAction, rackAction, length: dims.x * s }
   }, [scene, animations, muzzle, size])
 }
 
@@ -81,17 +90,19 @@ function PistolMesh({
   muzzle = 1,
   animated,
   fireSignal,
+  reloadSignal,
   aim,
   size = 1.7,
   autoRotate,
 }: PistolMeshConfig & { autoRotate?: boolean }) {
-  const { inner, muzzleTip, mixer, fireAction } = usePistolModel(url, muzzle, size)
+  const { inner, muzzleTip, mixer, shotAction, rackAction } = usePistolModel(url, muzzle, size)
   const group = useRef<THREE.Group>(null)
   const yawRef = useRef<THREE.Group>(null)
   const pitchRef = useRef<THREE.Group>(null)
   const flash = useRef<THREE.Group>(null)
   const flashLight = useRef<THREE.PointLight>(null)
   const lastFire = useRef(fireSignal?.current ?? 0)
+  const lastReload = useRef(reloadSignal?.current ?? 0)
   const flashTimer = useRef(0)
   const raycaster = useMemo(() => new THREE.Raycaster(), [])
   const aimPlane = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), [])
@@ -105,8 +116,12 @@ function PistolMesh({
     if (fireSignal && fireSignal.current !== lastFire.current) {
       lastFire.current = fireSignal.current
       flashTimer.current = FLASH_DURATION
-      fireAction?.reset().play()
+      shotAction?.reset().play()
       if (flash.current) flash.current.rotation.z = Math.random() * Math.PI * 2
+    }
+    if (reloadSignal && reloadSignal.current !== lastReload.current) {
+      lastReload.current = reloadSignal.current
+      rackAction?.reset().play()
     }
     if (flashTimer.current > 0) {
       flashTimer.current -= delta
@@ -206,11 +221,104 @@ function PistolMesh({
   )
 }
 
+interface CinematicGunSpec {
+  url: string
+  muzzle: 1 | -1
+  size: number
+  position: [number, number, number]
+  /** Saniyedeki dönüş hızı (radyan); negatif = ters yön */
+  spin: number
+  /** Süzülme fazı kaydırması */
+  phase?: number
+}
+
+function CinematicGun({ spec }: { spec: CinematicGunSpec }) {
+  const { inner } = usePistolModel(spec.url, spec.muzzle, spec.size)
+  const ref = useRef<THREE.Group>(null)
+
+  useFrame((state, delta) => {
+    if (!ref.current) return
+    ref.current.rotation.y += delta * spec.spin
+    ref.current.position.y =
+      spec.position[1] + Math.sin(state.clock.elapsedTime * 0.7 + (spec.phase ?? 0)) * 0.14
+  })
+
+  return (
+    <group ref={ref} position={spec.position}>
+      <primitive object={inner} />
+    </group>
+  )
+}
+
+export interface DualPistolViewerProps {
+  guns: CinematicGunSpec[]
+  className?: string
+}
+
+function ParallaxRig({ children }: { children: React.ReactNode }) {
+  const ref = useRef<THREE.Group>(null)
+
+  useFrame((state, delta) => {
+    if (!ref.current) return
+    ref.current.rotation.y = THREE.MathUtils.damp(
+      ref.current.rotation.y,
+      state.pointer.x * 0.08,
+      3,
+      delta
+    )
+    ref.current.rotation.x = THREE.MathUtils.damp(
+      ref.current.rotation.x,
+      -state.pointer.y * 0.05,
+      3,
+      delta
+    )
+  })
+
+  return <group ref={ref}>{children}</group>
+}
+
+/** Hero için: tek Canvas'ta birden fazla sinematik süzülen tabanca */
+export function DualPistolViewer({ guns, className }: DualPistolViewerProps) {
+  return (
+    <div className={className}>
+      <Canvas
+        camera={{ position: [0, 0.6, 4.2], fov: 38 }}
+        dpr={[1, 1.75]}
+        gl={{ antialias: true, alpha: true }}
+        style={{ background: 'transparent' }}
+      >
+        <Suspense fallback={null}>
+          <hemisphereLight intensity={0.5} groundColor={0x0a0a0a} />
+          <directionalLight position={[3, 4, 5]} intensity={2.2} color={0xfff2cc} />
+          <directionalLight position={[-4, 2, -3]} intensity={2.4} color={0xd4af37} />
+          <directionalLight position={[0, -3, 2]} intensity={0.5} color={0x8899ff} />
+          <pointLight position={[0, 0, 3]} intensity={12} color={0xffe9b0} distance={9} />
+          <Environment preset="city" />
+          <ParallaxRig>
+            {guns.map((spec, i) => (
+              <CinematicGun key={i} spec={spec} />
+            ))}
+          </ParallaxRig>
+          <ContactShadows
+            position={[0, -1.5, 0]}
+            opacity={0.4}
+            scale={10}
+            blur={2.8}
+            far={2.5}
+            color="#d4af37"
+          />
+        </Suspense>
+      </Canvas>
+    </div>
+  )
+}
+
 export interface PistolViewerProps {
   modelUrl: string
   muzzle?: 1 | -1
   animated?: boolean
   fireSignal?: { current: number }
+  reloadSignal?: { current: number }
   aim?: boolean
   parallax?: boolean
   autoRotate?: boolean
@@ -225,6 +333,7 @@ export function PistolViewer({
   muzzle = 1,
   animated = false,
   fireSignal,
+  reloadSignal,
   aim = false,
   parallax = true,
   autoRotate = false,
@@ -254,6 +363,7 @@ export function PistolViewer({
               muzzle={muzzle}
               animated={animated}
               fireSignal={fireSignal}
+              reloadSignal={reloadSignal}
               aim={aim}
               size={size}
               autoRotate={autoRotate}

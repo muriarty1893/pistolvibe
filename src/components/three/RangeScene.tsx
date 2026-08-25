@@ -9,6 +9,7 @@ export interface RangeSceneProps {
   active: boolean
   elapsed: number
   shotSignal: { current: number }
+  reloadSignal: { current: number }
   onHit: () => void
   onMiss: () => void
 }
@@ -164,7 +165,13 @@ function Spark({ data, onDone }: { data: Spark; onDone: (id: number) => void }) 
   )
 }
 
-function ViewModel({ shotSignal }: { shotSignal: { current: number } }) {
+function ViewModel({
+  shotSignal,
+  reloadSignal,
+}: {
+  shotSignal: { current: number }
+  reloadSignal: { current: number }
+}) {
   const { scene, animations } = useGLTF('/models/colt_m1911.glb')
   const yawRef = useRef<THREE.Group>(null)
   const pitchRef = useRef<THREE.Group>(null)
@@ -172,6 +179,7 @@ function ViewModel({ shotSignal }: { shotSignal: { current: number } }) {
   const flash = useRef<THREE.Group>(null)
   const flashLight = useRef<THREE.PointLight>(null)
   const lastShot = useRef(shotSignal.current)
+  const lastReload = useRef(reloadSignal.current)
   const flashPower = useRef(0)
   const kick = useRef(0)
 
@@ -199,11 +207,18 @@ function ViewModel({ shotSignal }: { shotSignal: { current: number } }) {
     clone.position.set(-center.x * s, -center.y * s, -center.z * s)
     const mixer = new THREE.AnimationMixer(clone)
     const clip = THREE.AnimationClip.findByName(animations, 'Fire') ?? animations[0]
-    const action = mixer.clipAction(clip)
-    action.loop = THREE.LoopOnce
-    action.clampWhenFinished = true
-    action.timeScale = 10
-    return { clone, mixer, action }
+    // klip iki faz: 0-2.0s kızak çekme (rack), 3.3-4.8s atış (shot)
+    const shotClip = THREE.AnimationUtils.subclip(clip, 'Shot', 99, 144, 30)
+    const shot = mixer.clipAction(shotClip)
+    shot.loop = THREE.LoopOnce
+    shot.clampWhenFinished = true
+    shot.timeScale = 10
+    const rackClip = THREE.AnimationUtils.subclip(clip, 'Rack', 0, 60, 30)
+    const rack = mixer.clipAction(rackClip)
+    rack.loop = THREE.LoopOnce
+    rack.clampWhenFinished = true
+    rack.timeScale = 2
+    return { clone, mixer, shot, rack }
   }, [scene, animations])
 
   useFrame((state, delta) => {
@@ -229,9 +244,14 @@ function ViewModel({ shotSignal }: { shotSignal: { current: number } }) {
       )
     }
 
+    if (reloadSignal.current !== lastReload.current) {
+      lastReload.current = reloadSignal.current
+      prepared.rack.reset().play()
+    }
+
     if (shotSignal.current !== lastShot.current) {
       lastShot.current = shotSignal.current
-      prepared.action.reset().play()
+      prepared.shot.reset().play()
       flashPower.current = 1
       kick.current = 1
       if (flash.current) flash.current.rotation.z = Math.random() * Math.PI * 2
@@ -398,7 +418,7 @@ function RangeEnvironment() {
   )
 }
 
-export function RangeScene({ active, elapsed, shotSignal, onHit, onMiss }: RangeSceneProps) {
+export function RangeScene({ active, elapsed, shotSignal, reloadSignal, onHit, onMiss }: RangeSceneProps) {
   const [targets, setTargets] = useState<TargetData[]>([])
   const [sparks, setSparks] = useState<Spark[]>([])
 
@@ -432,7 +452,7 @@ export function RangeScene({ active, elapsed, shotSignal, onHit, onMiss }: Range
         <directionalLight position={[-5, 3, -4]} intensity={1} color="#d4af37" />
         <pointLight position={[0, 4.2, -6]} intensity={30} color="#ffe2a0" distance={16} />
 
-        <ViewModel shotSignal={shotSignal} />
+        <ViewModel shotSignal={shotSignal} reloadSignal={reloadSignal} />
         <RangeEnvironment />
 
         <mesh

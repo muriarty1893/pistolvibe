@@ -46,6 +46,7 @@ export function RangeGame() {
   const shotSignal = useRef(0)
   const startedAt = useRef(0)
   const reloadUntil = useRef(0)
+  const reloadSignal = useRef(0)
   const containerRef = useRef<HTMLDivElement>(null)
   const statsRef = useRef({ hits: 0, shots: 0, bestStreak: 0 })
   const scoreRef = useRef(0)
@@ -107,6 +108,7 @@ export function RangeGame() {
     if (reloading || ammo === MAG_SIZE || phase !== 'playing') return
     setReloading(true)
     playReload()
+    reloadSignal.current += 1
     reloadUntil.current = performance.now() + RELOAD_MS
     window.setTimeout(() => {
       setAmmo(MAG_SIZE)
@@ -197,6 +199,7 @@ export function RangeGame() {
                   active={phase === 'playing'}
                   elapsed={(performance.now() - startedAt.current) / 1000}
                   shotSignal={shotSignal}
+                  reloadSignal={reloadSignal}
                   onHit={handleHit}
                   onMiss={handleMiss}
                 />

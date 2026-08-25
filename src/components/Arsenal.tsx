@@ -1,155 +1,69 @@
-import { lazy, Suspense, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { MousePointerClick } from 'lucide-react'
+import { Crosshair } from 'lucide-react'
 
-import { PISTOLS } from '@/lib/pistols'
+import { Marquee } from '@/components/bits/Marquee'
 import { SectionHeading } from '@/components/SectionHeading'
 import { Reveal } from '@/components/Reveal'
-import GlareHover from '@/components/bits/GlareHover'
-import { cn } from '@/lib/utils'
 
-const PistolViewer = lazy(() =>
-  import('@/components/three/PistolViewer').then((m) => ({ default: m.PistolViewer }))
-)
+const PISTOLS = [
+  { name: 'NOVRITSCH SSP5 6" GBB', href: 'https://eu.novritsch.com/product/ssp5-gas-blowback-pistol/' },
+  { name: 'Glock 17 Gen 4', href: 'https://weairsoft.com/we-g001b-bk.html' },
+]
 
 export function Arsenal() {
-  const [activeId, setActiveId] = useState(PISTOLS[0].id)
-  const [viewerKey, setViewerKey] = useState(0)
-  const [fireSignal, setFireSignal] = useState({ current: 0 })
-  const active = PISTOLS.find((p) => p.id === activeId) ?? PISTOLS[0]
-
-  const select = (id: string) => {
-    setActiveId(id)
-    setViewerKey((k) => k + 1)
-  }
-
   return (
-    <section id="cephanelik" className="relative py-24">
+    <section id="cephanelik" className="relative overflow-hidden py-24">
       <div className="container mx-auto px-6">
         <SectionHeading
           badge="Cephanelik"
           title="Takımın Tabancaları"
-          description="Sahada kullandığımız efsanevi tabancalar. Seç, çevir, incele."
+          description="Sahada kullandığımız efsanevi tabancalar."
         />
-
-        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {PISTOLS.map((pistol, i) => (
-            <Reveal key={pistol.id} delay={i * 70} className="h-full">
-              <GlareHover
-                glareColor="#d4af37"
-                glareOpacity={0.35}
-                glareSize={220}
-                borderRadius="0.5rem"
-                background="transparent"
-                width="100%"
-                height="100%"
-                className={cn(
-                  'h-full w-full transition-colors duration-200',
-                  pistol.id === activeId
-                    ? 'border-primary/70 bg-primary/10'
-                    : 'border-border bg-card/50 hover:border-primary/40'
-                )}
-              >
-                <button
-                  type="button"
-                  onClick={() => select(pistol.id)}
-                  className="w-full cursor-pointer p-4 text-left"
-                  aria-pressed={pistol.id === activeId}
-                >
-                  <span className="block font-display text-sm uppercase tracking-wider text-foreground">
-                    {pistol.name}
-                  </span>
-                  <span className="mt-1 block text-xs text-muted-foreground">
-                    {pistol.caliber} • {pistol.role}
-                  </span>
-                </button>
-              </GlareHover>
-            </Reveal>
-          ))}
-        </div>
-
-        <div className="relative mx-auto mt-10 grid max-w-6xl grid-cols-1 items-center gap-8 lg:grid-cols-5">
-          <div className="relative col-span-1 h-[340px] overflow-hidden rounded-xl border border-border bg-gradient-to-b from-card to-background sm:h-[440px] lg:col-span-3">
-            <div
-              className="pointer-events-none absolute inset-0"
-              style={{
-                background:
-                  'radial-gradient(ellipse 55% 45% at 50% 40%, rgba(212,175,55,0.14), transparent 70%)',
-              }}
-            />
-            <Suspense fallback={null}>
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={viewerKey}
-                  className="absolute inset-0"
-                  initial={{ opacity: 0, x: 80 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -80 }}
-                  transition={{ duration: 0.35, ease: 'easeOut' }}
-                  onPointerDown={() => {
-                    if (active.animated) fireSignal.current += 1
-                  }}
-                >
-                  <PistolViewer
-                    modelUrl={active.model}
-                    muzzle={active.muzzle}
-                    animated={active.animated}
-                    fireSignal={fireSignal}
-                    className="h-full w-full"
-                    parallax
-                    autoRotate
-                  />
-                </motion.div>
-              </AnimatePresence>
-            </Suspense>
-            <div className="pointer-events-none absolute left-4 top-4 rounded border border-primary/30 bg-background/70 px-3 py-1 font-display text-xs uppercase tracking-widest text-primary backdrop-blur-sm">
-              {active.nickname}
-            </div>
-            {active.animated && (
-              <div className="pointer-events-none absolute bottom-4 left-4 flex items-center gap-2 rounded border border-primary/30 bg-background/70 px-3 py-1.5 text-xs uppercase tracking-widest text-muted-foreground backdrop-blur-sm">
-                <MousePointerClick className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-                Tıkla — ateş etsin
-              </div>
-            )}
-          </div>
-
-          <div className="col-span-1 lg:col-span-2">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={active.id}
-                initial={{ opacity: 0, y: 24 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -24 }}
-                transition={{ duration: 0.3 }}
-              >
-                <h3 className="font-display text-3xl uppercase tracking-wide text-foreground">
-                  {active.name}
-                </h3>
-                <p className="mt-4 text-muted-foreground">{active.description}</p>
-
-                <div className="mt-8 space-y-4">
-                  {active.stats.map((stat, i) => (
-                    <div key={stat.label}>
-                      <div className="mb-1 flex items-center justify-between text-xs uppercase tracking-wider">
-                        <span className="text-muted-foreground">{stat.label}</span>
-                        <span className="font-display text-primary">{stat.value}</span>
-                      </div>
-                      <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
-                        <motion.div
-                          className="h-full rounded-full bg-gradient-to-r from-primary/60 to-primary"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${stat.value}%` }}
-                          transition={{ duration: 0.6, delay: 0.1 + i * 0.08, ease: 'easeOut' }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            </AnimatePresence>
-          </div>
-        </div>
       </div>
+
+      <Reveal className="relative mt-4">
+        {/* kenar fade maskeleri */}
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-24 bg-gradient-to-r from-background to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-24 bg-gradient-to-l from-background to-transparent" />
+
+        <div className="border-y border-primary/20 bg-card/40 py-8 backdrop-blur-sm">
+          <Marquee pauseOnHover className="py-2 [--duration:28s] [--gap:4rem]" aria-label="Takım tabancaları">
+            {PISTOLS.map((pistol) => (
+              <span key={pistol.name} className="flex items-center gap-[var(--gap)]">
+                <a
+                  href={pistol.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="whitespace-nowrap font-display text-4xl uppercase tracking-wide text-foreground transition-colors duration-200 hover:text-primary sm:text-6xl"
+                >
+                  {pistol.name}
+                </a>
+                <Crosshair
+                  className="h-8 w-8 shrink-0 text-primary gold-glow-sm"
+                  aria-hidden="true"
+                />
+              </span>
+            ))}
+          </Marquee>
+          <Marquee
+            reverse
+            pauseOnHover
+            className="mt-2 py-2 opacity-70 [--duration:36s] [--gap:4rem]"
+            aria-hidden="true"
+          >
+            {PISTOLS.map((pistol) => (
+              <span key={pistol.name} className="flex items-center gap-[var(--gap)]">
+                <span
+                  className="whitespace-nowrap font-display text-3xl uppercase tracking-widest text-transparent sm:text-5xl"
+                  style={{ WebkitTextStroke: '1px rgba(212,175,55,0.55)' }}
+                >
+                  {pistol.name}
+                </span>
+                <span className="h-2 w-2 shrink-0 rotate-45 bg-primary/50" aria-hidden="true" />
+              </span>
+            ))}
+          </Marquee>
+        </div>
+      </Reveal>
     </section>
   )
 }
