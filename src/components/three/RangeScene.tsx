@@ -1,6 +1,6 @@
 import { Suspense, useCallback, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { useGLTF } from '@react-three/drei'
+import { Sky, useTexture, useGLTF } from '@react-three/drei'
 import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js'
 import * as THREE from 'three'
 import { getFlashTexture } from '@/lib/flashTexture'
@@ -37,6 +37,10 @@ interface Spark {
 
 let nextId = 1
 
+const _muzzleQ = new THREE.Quaternion()
+const _aheadV = new THREE.Vector3()
+const muzzleOffsetV = new THREE.Vector3()
+
 const RISE_DURATION = 0.28
 const FALL_DURATION = 0.16
 
@@ -46,7 +50,7 @@ function MuzzleFlash({ innerRef }: { innerRef: React.RefObject<THREE.Group> }) {
   return (
     <group ref={innerRef} visible={false}>
       <mesh>
-        <planeGeometry args={[0.55, 0.55]} />
+        <planeGeometry args={[0.34, 0.34]} />
         <meshBasicMaterial
           map={tex}
           transparent
@@ -56,7 +60,7 @@ function MuzzleFlash({ innerRef }: { innerRef: React.RefObject<THREE.Group> }) {
         />
       </mesh>
       <mesh rotation={[0, Math.PI / 2, 0]}>
-        <planeGeometry args={[0.55, 0.55]} />
+        <planeGeometry args={[0.34, 0.34]} />
         <meshBasicMaterial
           map={tex}
           transparent
@@ -235,12 +239,10 @@ function ViewModel({
     const s = 0.62 / maxDim
     clone.scale.setScalar(s)
     clone.position.set(-center.x * s, -center.y * s, -center.z * s)
-    // namlu ucu: -Z ucunda, namlu hattında (yüksek)
-    const muzzleTip = new THREE.Vector3(
-      0,
-      ((box.max.y - center.y) * 0.78) * s,
-      (box.min.z - center.z) * s
-    )
+    // namlu ucu: Slide_012 kemiğinden canlı hesaplanır (poza kilitli)
+    // kemik normalize uzayda z=-0.085'te; namlu ağzı -0.31 → kemikten 0.225 ileri, boru hattında
+    const slideBone = clone.getObjectByName('Slide_012') ?? null
+    const muzzleOffset = new THREE.Vector3(0, 0.004, -0.225)
     const mixer = new THREE.AnimationMixer(clone)
     const clip = THREE.AnimationClip.findByName(animations, 'Fire') ?? animations[0]
     // klip fazları: 0.2-2.44s şarjör değişimi (f6-73), 3.5-4.15s tetik+ateş (f106-125)
@@ -257,8 +259,18 @@ function ViewModel({
     const reload = mixer.clipAction(reloadClip)
     reload.loop = THREE.LoopOnce
     reload.timeScale = 2.1
-    return { clone, mixer, shot, reload, muzzleTip }
+    return { clone, mixer, shot, reload, slideBone, muzzleOffset }
   }, [scene, animations])
+
+  // namlu ucunun world pozisyonu: slide kemiğinin world noktası + assembly uzayında namlu ofseti
+  // (kemiğin kendi rest rotasyonu eksen kaydırır; yön group quaternion'undan alınır)
+  const getMuzzleWorld = (out: THREE.Vector3) => {
+    if (!prepared.slideBone || !group.current) return out.set(0, 0, 0)
+    prepared.slideBone.updateWorldMatrix(true, false)
+    out.setFromMatrixPosition(prepared.slideBone.matrixWorld)
+    group.current.getWorldQuaternion(_muzzleQ)
+    return out.add(muzzleOffsetV.copy(prepared.muzzleOffset).applyQuaternion(_muzzleQ))
+  }
 
   useFrame((state, delta) => {
     prepared.mixer.update(delta)
@@ -311,28 +323,24 @@ function ViewModel({
 
       // mermi gun'un BAKTIĞI yönde gider — imleç noktasına değil
       if (group.current) {
-        const origin = prepared.muzzleTip.clone()
-        group.current.localToWorld(origin)
-        const ahead = prepared.muzzleTip.clone()
-        ahead.z -= 12
-        group.current.localToWorld(ahead)
-        const dir = ahead.sub(origin).normalize()
+        const origin = getMuzzleWorld(new THREE.Vector3())
+        group.current.getWorldQuaternion(_muzzleQ)
+        const dir = _aheadV.set(0, 0, -1).applyQuaternion(_muzzleQ).normalize()
         onShoot(origin, dir)
       }
     }
     kick.current = THREE.MathUtils.damp(kick.current, 0, 12, delta)
     flashPower.current = THREE.MathUtils.damp(flashPower.current, 0, 30, delta)
 
-    // flaş pozisyonu: namlu ucu (group uzayında sabit)
-    if (flash.current) {
-      flash.current.position.copy(prepared.muzzleTip)
+    // flaş: namlu ucunda (slide kemiğinden canlı) — world → group lokaline çevrilir
+    if (flash.current && group.current) {
+      getMuzzleWorld(flash.current.position)
+      group.current.worldToLocal(flash.current.position)
     }
-    if (flashLight.current) {
-      flashLight.current.position.set(
-        prepared.muzzleTip.x,
-        prepared.muzzleTip.y + 0.04,
-        prepared.muzzleTip.z
-      )
+    if (flashLight.current && group.current) {
+      getMuzzleWorld(flashLight.current.position)
+      flashLight.current.position.y += 0.04
+      group.current.worldToLocal(flashLight.current.position)
     }
 
     // mobil (dikey) yerleşim: gun ortada, biraz küçük ve aşağıda
@@ -362,7 +370,7 @@ function ViewModel({
     const fp = Math.max(flashPower.current, 0)
     if (flash.current) {
       flash.current.visible = fp > 0.04
-      flash.current.scale.setScalar(0.7 + fp * 0.9)
+      flash.current.scale.setScalar(0.55 + fp * 0.7)
     }
     if (flashLight.current) flashLight.current.intensity = fp * 16
   })
@@ -422,142 +430,251 @@ function Spawner({
   return null
 }
 
-/** Kenney CC0 prop: beyaz gelir, renk atayıp normalize ederiz */
-function ColoredProp({
+/** Dokulu CC0 prop (Quaternius Stylized Nature / Eclair): orijinal malzeme korunur, normalize edilir */
+function NatureProp({
   url,
-  color,
-  metalness = 0.25,
-  roughness = 0.7,
-  scale = 1,
+  x,
+  z,
+  s = 1,
+  ry = 0,
+  y = 0,
 }: {
   url: string
-  color: string
-  metalness?: number
-  roughness?: number
-  scale?: number
+  x: number
+  z: number
+  s?: number
+  ry?: number
+  y?: number
 }) {
   const { scene } = useGLTF(url)
   const model = useMemo(() => {
-    const c = skeletonClone(scene)
-    c.traverse((child) => {
-      const mesh = child as THREE.Mesh
-      if (mesh.isMesh) {
-        const m = (mesh.material as THREE.MeshStandardMaterial).clone()
-        m.color = new THREE.Color(color)
-        m.metalness = metalness
-        m.roughness = roughness
-        mesh.material = m
-      }
-    })
+    const c = scene.clone(true)
     const box = new THREE.Box3().setFromObject(c)
     const size = box.getSize(new THREE.Vector3())
-    const s = scale / Math.max(size.x, size.y, size.z, 0.001)
-    c.scale.setScalar(s)
+    const k = s / Math.max(size.x, size.y, size.z, 0.001)
+    c.scale.setScalar(k)
+    c.updateMatrixWorld(true)
+    const b2 = new THREE.Box3().setFromObject(c)
+    c.position.y = y - b2.min.y
     return c
-  }, [scene, color, metalness, roughness, scale])
-  return <primitive object={model} />
+  }, [scene, s, y])
+  return (
+    <group position={[x, 0, z]} rotation={[0, ry, 0]}>
+      <primitive object={model} />
+    </group>
+  )
+}
+
+const ENV_URLS = [
+  '/models/env/commontree-1.glb',
+  '/models/env/commontree-2.glb',
+  '/models/env/commontree-3.glb',
+  '/models/env/commontree-4.glb',
+  '/models/env/commontree-5.glb',
+  '/models/env/pine-1.glb',
+  '/models/env/pine-2.glb',
+  '/models/env/pine-3.glb',
+  '/models/env/pine-4.glb',
+  '/models/env/pine-5.glb',
+  '/models/env/deadtree-1.glb',
+  '/models/env/deadtree-2.glb',
+  '/models/env/twistedtree-1.glb',
+  '/models/env/bush-common-flowers.glb',
+  '/models/env/fern.glb',
+  '/models/env/plant-1-big.glb',
+  '/models/env/grass-common-tall.glb',
+  '/models/env/grass-common-short.glb',
+  '/models/env/grass-wispy-tall.glb',
+  '/models/env/flower-3-group.glb',
+  '/models/env/flower-4-group.glb',
+  '/models/env/rock-medium-1.glb',
+  '/models/env/rock-medium-2.glb',
+  '/models/env/rock-medium-3.glb',
+  '/models/env/rockpath-square-wide.glb',
+  '/models/env/barrel.glb',
+  '/models/env/cardboard-box.glb',
+  '/models/env/barrier.glb',
+  '/models/env/trash-can.glb',
+]
+ENV_URLS.forEach((u) => useGLTF.preload(u))
+
+/** deterministik pseudo-random */
+function prand(i: number, salt = 1): number {
+  const v = Math.sin(i * 127.1 * salt + 311.7) * 43758.5453
+  return v - Math.floor(v)
+}
+
+function Ground() {
+  const [colorMap, normalMap] = useTexture([
+    '/textures/grass_color.jpg',
+    '/textures/grass_normal.jpg',
+  ])
+  const gl = useThree((s) => s.gl)
+  useMemo(() => {
+    for (const t of [colorMap, normalMap]) {
+      t.wrapS = THREE.RepeatWrapping
+      t.wrapT = THREE.RepeatWrapping
+      t.repeat.set(22, 26)
+    }
+    colorMap.colorSpace = THREE.SRGBColorSpace
+    const aniso = Math.min(8, gl.capabilities.getMaxAnisotropy())
+    colorMap.anisotropy = aniso
+    normalMap.anisotropy = aniso
+  }, [colorMap, normalMap, gl])
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -7]} receiveShadow>
+      <planeGeometry args={[46, 52]} />
+      <meshStandardMaterial map={colorMap} normalMap={normalMap} normalScale={new THREE.Vector2(0.7, 0.7)} roughness={0.95} />
+    </mesh>
+  )
 }
 
 function RangeEnvironment() {
-  const trees = useMemo(
+  // arka orman duvarı: çamlar
+  const backForest = useMemo(() => {
+    const arr: { x: number; z: number; s: number; ry: number; url: string }[] = []
+    let i = 0
+    for (let x = -17; x <= 17; x += 3.1) {
+      const j = prand(i)
+      arr.push({
+        x: x + (j - 0.5) * 2.2,
+        z: -25 - prand(i, 2) * 6,
+        s: 4.2 + prand(i, 3) * 1.8,
+        ry: prand(i, 4) * Math.PI * 2,
+        url: `/models/env/pine-${1 + (i % 5)}.glb`,
+      })
+      i++
+    }
+    return arr
+  }, [])
+
+  // yan ağaçlar: yapraklı + karakter ağaçları
+  const sideTrees = useMemo(
     () => [
-      { url: '/models/props/tree_detailed.glb', x: -7.5, z: -8, s: 3.2, r: 0.4 },
-      { url: '/models/props/tree_default.glb', x: 7.8, z: -10, s: 3.6, r: 1.2 },
-      { url: '/models/props/tree_cone.glb', x: -8.5, z: -14, s: 3.8, r: 2 },
-      { url: '/models/props/tree_detailed.glb', x: 8.2, z: -16, s: 3.4, r: 0.8 },
-      { url: '/models/props/tree_default.glb', x: -6.5, z: -18, s: 3.5, r: 1.7 },
-      { url: '/models/props/tree_cone.glb', x: 6.8, z: -4.5, s: 2.8, r: 0.2 },
+      { url: '/models/env/commontree-1.glb', x: -7.6, z: -9, s: 3.4, ry: 0.4 },
+      { url: '/models/env/commontree-3.glb', x: 8.4, z: -11, s: 3.8, ry: 1.9 },
+      { url: '/models/env/commontree-2.glb', x: -9.2, z: -16, s: 3.6, ry: 2.7 },
+      { url: '/models/env/commontree-5.glb', x: 9.6, z: -18, s: 3.5, ry: 0.9 },
+      { url: '/models/env/commontree-4.glb', x: -6.8, z: -20, s: 3.7, ry: 1.4 },
+      { url: '/models/env/commontree-2.glb', x: 7.4, z: -5, s: 3.0, ry: 3.6 },
+      { url: '/models/env/commontree-1.glb', x: 11.5, z: -13, s: 3.6, ry: 2.2 },
+      { url: '/models/env/commontree-3.glb', x: -11.8, z: -7, s: 3.3, ry: 5.0 },
+      { url: '/models/env/twistedtree-1.glb', x: -10.5, z: -22, s: 3.8, ry: 1.1 },
+      { url: '/models/env/deadtree-1.glb', x: 12.2, z: -21, s: 3.2, ry: 0.7 },
+      { url: '/models/env/deadtree-2.glb', x: -13.5, z: -13, s: 3.0, ry: 2.9 },
+      { url: '/models/env/commontree-4.glb', x: 13.8, z: -8, s: 3.4, ry: 4.2 },
     ],
     []
   )
+
+  // çalılar + çiçekler (yeşil çalı çeşitleri)
   const bushes = useMemo(
     () => [
-      { x: -4.6, z: -6, s: 0.8 },
-      { x: 4.8, z: -7.5, s: 0.9 },
-      { x: -5.2, z: -12, s: 1.0 },
-      { x: 5.4, z: -13, s: 0.8 },
-      { x: 3.9, z: -3.4, s: 0.6 },
+      { x: -4.9, z: -6.5, s: 1.0, k: 'fern' },
+      { x: 5.2, z: -8, s: 1.1, k: 'flower' },
+      { x: -5.8, z: -12.5, s: 1.2, k: 'plant' },
+      { x: 6.1, z: -14, s: 0.9, k: 'fern' },
+      { x: 4.4, z: -3.8, s: 0.8, k: 'flower' },
+      { x: -4.2, z: -2.9, s: 0.8, k: 'plant' },
+      { x: -6.6, z: -18.5, s: 1.3, k: 'fern' },
+      { x: 7.0, z: -20, s: 1.1, k: 'flower' },
+      { x: 8.6, z: -16, s: 1.0, k: 'plant' },
+      { x: -8.9, z: -10.5, s: 1.05, k: 'plant' },
     ],
     []
   )
-  const grassTufts = useMemo(() => {
-    const arr: { x: number; z: number; s: number; url: string }[] = []
+
+  const bushUrl = (k: string) =>
+    k === 'flower'
+      ? '/models/env/bush-common-flowers.glb'
+      : k === 'fern'
+        ? '/models/env/fern.glb'
+        : '/models/env/plant-1-big.glb'
+
+  // çim öbekleri + çiçekler saha içine serpilir
+  const tufts = useMemo(() => {
+    const arr: { x: number; z: number; s: number; url: string; ry: number }[] = []
     for (let i = 0; i < 26; i++) {
+      const kind = prand(i, 5)
       arr.push({
-        x: (Math.sin(i * 12.9898) * 43758.5453 % 1) * 14 - 7,
-        z: -2 - (Math.abs(Math.sin(i * 78.233) * 43758.5453 % 1) * 14),
-        s: 0.5 + (i % 3) * 0.2,
-        url: i % 2 === 0 ? '/models/props/grass.glb' : '/models/props/grass_large.glb',
+        x: (prand(i) - 0.5) * 17,
+        z: -2 - prand(i, 2) * 19,
+        s: 0.55 + kind * 0.5,
+        ry: prand(i, 3) * Math.PI * 2,
+        url:
+          kind < 0.4
+            ? '/models/env/grass-common-tall.glb'
+            : kind < 0.7
+              ? '/models/env/grass-wispy-tall.glb'
+              : kind < 0.85
+                ? '/models/env/flower-3-group.glb'
+                : '/models/env/flower-4-group.glb',
       })
     }
     return arr
   }, [])
+
+  // kayalar
   const rocks = useMemo(
     () => [
-      { x: -4.2, z: -15.5, s: 0.7 },
-      { x: 4.5, z: -11.5, s: 0.5 },
+      { x: -3.6, z: -15.5, s: 0.75, url: '/models/env/rock-medium-1.glb', ry: 0.4 },
+      { x: 4.7, z: -11.5, s: 0.55, url: '/models/env/rock-medium-2.glb', ry: 1.8 },
+      { x: 2.9, z: -19, s: 0.9, url: '/models/env/rock-medium-3.glb', ry: 2.6 },
+      { x: -8.2, z: -4.5, s: 0.6, url: '/models/env/rock-medium-2.glb', ry: 4.1 },
     ],
     []
   )
-  const fences = useMemo(() => {
-    const arr: { x: number; z: number; r: number }[] = []
-    for (let i = 0; i < 6; i++) {
-      arr.push({ x: -3.9 + i * 0.001, z: -1.2 - i * 1.05, r: 0 })
-    }
-    return arr.map((f) => ({ ...f, x: -4.05 }))
-  }, [])
 
   return (
     <group>
-      {/* çim zemin */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -7]} receiveShadow>
-        <planeGeometry args={[40, 44]} />
-        <meshStandardMaterial color="#5d8a44" roughness={0.95} />
-      </mesh>
-      {/* atış şeritleri — açık hava için soluk */}
+      <Ground />
+      {/* atış şeritleri — çim üzerinde soluk beyaz */}
       {[-1.8, 0, 1.8].map((x) => (
         <mesh key={x} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.01, -6]}>
           <planeGeometry args={[0.07, 15]} />
           <meshStandardMaterial color="#e8e4d0" roughness={0.9} />
         </mesh>
       ))}
-      {/* gökyüzü rengine uyumlu sis + açık hava ışığı Canvas'ta */}
+      {/* atış hattı taş patika */}
+      {[-0.55, 0.55].map((x) => (
+        <NatureProp key={`p${x}`} url="/models/env/rockpath-square-wide.glb" x={x} z={0.3} s={0.95} ry={0.1 * x} y={0.02} />
+      ))}
+      {/* atış hattı props: variller, kutular, bariyer, çöp kutusu */}
+      <NatureProp url="/models/env/barrel.glb" x={-3.1} z={-1.4} s={1.15} ry={0.3} />
+      <NatureProp url="/models/env/barrel.glb" x={-2.55} z={-1.75} s={1.15} ry={1.7} />
+      <NatureProp url="/models/env/barrel.glb" x={-2.85} z={-1.55} s={1.15} ry={0.9} y={0.62} />
+      <NatureProp url="/models/env/cardboard-box.glb" x={3.3} z={-2.2} s={0.9} ry={0.5} />
+      <NatureProp url="/models/env/cardboard-box.glb" x={3.75} z={-1.8} s={0.7} ry={1.2} y={0.42} />
+      <NatureProp url="/models/env/barrier.glb" x={-4.6} z={-4.2} s={1.6} ry={0.12} />
+      <NatureProp url="/models/env/barrier.glb" x={4.9} z={-4.8} s={1.6} ry={-0.15} />
+      <NatureProp url="/models/env/trash-can.glb" x={-2.4} z={-0.6} s={0.95} ry={2.1} />
 
-      {/* ağaçlar — saha çevresi */}
-      {trees.map((t, i) => (
-        <group key={i} position={[t.x, 0, t.z]} rotation={[0, t.r, 0]}>
-          <ColoredProp url={t.url} color="#3f6b2e" roughness={0.9} scale={t.s} />
-        </group>
+      {/* arka orman duvarı */}
+      {backForest.map((t, i) => (
+        <NatureProp key={`b${i}`} url={t.url} x={t.x} z={t.z} s={t.s} ry={t.ry} />
+      ))}
+      {/* yan ağaçlar */}
+      {sideTrees.map((t, i) => (
+        <NatureProp key={`s${i}`} url={t.url} x={t.x} z={t.z} s={t.s} ry={t.ry} />
       ))}
       {/* çalılar */}
       {bushes.map((b, i) => (
-        <group key={i} position={[b.x, 0, b.z]}>
-          <ColoredProp url="/models/props/plant_bush.glb" color="#4a7a38" roughness={0.9} scale={b.s} />
-        </group>
+        <NatureProp
+          key={`bu${i}`}
+          url={bushUrl(b.k)}
+          x={b.x}
+          z={b.z}
+          s={b.s}
+          ry={prand(i, 6) * Math.PI * 2}
+        />
       ))}
-      {/* çim öbekleri */}
-      {grassTufts.map((g, i) => (
-        <group key={i} position={[g.x, 0, g.z]}>
-          <ColoredProp url={g.url} color="#6b9a4a" roughness={0.95} scale={g.s} />
-        </group>
+      {/* çim + çiçek öbekleri */}
+      {tufts.map((g, i) => (
+        <NatureProp key={`g${i}`} url={g.url} x={g.x} z={g.z} s={g.s} ry={g.ry} />
       ))}
       {/* kayalar */}
       {rocks.map((r, i) => (
-        <group key={i} position={[r.x, 0.1, r.z]} rotation={[0, i * 1.3, 0]}>
-          <ColoredProp url="/models/props/rock_smallA.glb" color="#8a8a80" roughness={0.9} scale={r.s} />
-        </group>
-      ))}
-      {/* oyuncunun arkasına ahşap çit */}
-      {fences.map((f, i) => (
-        <group key={i} position={[f.x, 0, f.z]}>
-          <ColoredProp url="/models/props/fence_simple.glb" color="#7a5c38" roughness={0.85} scale={1.05} />
-        </group>
-      ))}
-      {/* Kenney hedef pankartları arka duvar yerine: uzak sıra ağaç duvarı */}
-      {[-6, -3, 0, 3, 6].map((x, i) => (
-        <group key={x} position={[x, 0, -20 - (i % 2)]} rotation={[0, i % 2 === 0 ? 0.1 : -0.1, 0]}>
-          <ColoredProp url="/models/props/tree_cone.glb" color="#35592a" roughness={0.9} scale={4.2} />
-        </group>
+        <NatureProp key={`r${i}`} url={r.url} x={r.x} z={r.z} s={r.s} ry={r.ry} />
       ))}
     </group>
   )
@@ -694,16 +811,21 @@ export function RangeScene({
       dpr={[1, 1.75]}
       gl={{ antialias: true }}
       style={{ cursor: 'none' }}
+      onCreated={({ gl }) => {
+        ;(window as unknown as Record<string, unknown>).__glInfo = gl.info
+      }}
     >
       <color attach="background" args={[0x9ec8e8]} />
-      <fog attach="fog" args={[0x9ec8e8, 18, 42]} />
+      <fog attach="fog" args={[0xcfe3f5, 24, 58]} />
 
       <Suspense fallback={null}>
         <CameraFit />
         <Spawner active={active} elapsed={elapsed} setTargets={setTargets} />
-        <hemisphereLight intensity={0.9} groundColor={0x3d5a2e} />
-        <directionalLight position={[6, 9, 3]} intensity={2.4} color="#fff5e0" />
-        <directionalLight position={[-6, 4, -4]} intensity={0.8} color="#cfe5ff" />
+        {/* prosedürel gökyüzü: güneş key light yönünde */}
+        <Sky sunPosition={[6, 9, 3]} turbidity={2.5} rayleigh={2.2} />
+        <hemisphereLight intensity={0.85} groundColor={0x4a6a35} />
+        <directionalLight position={[6, 9, 3]} intensity={2.6} color="#fff2d8" />
+        <directionalLight position={[-6, 4, -4]} intensity={0.7} color="#cfe5ff" />
 
         <ViewModel
           shotSignal={shotSignal}

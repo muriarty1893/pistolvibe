@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { useProgress } from '@react-three/drei'
 import { Crosshair, RotateCcw, Timer, Trophy, Zap } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -10,6 +11,28 @@ import { cn } from '@/lib/utils'
 const RangeScene = lazy(() =>
   import('@/components/three/RangeScene').then((m) => ({ default: m.RangeScene }))
 )
+
+/** GLB'ler arka planda inmeye başlar — kullanıcı "Ateş Başla"a basana kadar hazır olur */
+let scenePreloaded = false
+function preloadScene() {
+  if (scenePreloaded) return
+  scenePreloaded = true
+  void import('@/components/three/RangeScene')
+}
+
+/** Arena içi yükleme göstergesi (useProgress Canvas dışında da çalışır) */
+function GameLoader() {
+  const { active, progress } = useProgress()
+  if (!active) return null
+  return (
+    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-[#0b0b0e]">
+      <div className="h-1 w-44 overflow-hidden rounded-full bg-border">
+        <div className="h-full bg-primary transition-all duration-300" style={{ width: `${progress}%` }} />
+      </div>
+      <p className="font-display text-xs tracking-[0.3em] text-primary/70">MENZİL HAZIRLANIYOR</p>
+    </div>
+  )
+}
 
 const GAME_DURATION = 30
 const MAG_SIZE = 12
@@ -93,6 +116,12 @@ export function RangeGame() {
     }, 100)
     return () => window.clearInterval(id)
   }, [phase, finish])
+
+  // arena bileşeni görünür görülmez 3D chunk + GLB'leri ön yükle
+  useEffect(() => {
+    const id = window.setTimeout(preloadScene, 800)
+    return () => window.clearTimeout(id)
+  }, [])
 
   useEffect(() => {
     if (phase !== 'playing') return
@@ -254,6 +283,7 @@ export function RangeGame() {
           ref={containerRef}
           className="relative mx-auto h-[600px] w-full max-w-md select-none overflow-hidden rounded-xl border border-border bg-[#0b0b0e] sm:h-[560px] sm:max-w-5xl"
         >
+          <GameLoader />
           {phase === 'playing' && (
             <div
               onPointerDown={(e) => {
