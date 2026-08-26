@@ -150,6 +150,41 @@ export function RangeGame() {
     if (ammo - 1 <= 0) reload()
   }, [phase, ammo, reload])
 
+  // nişan: masaüstünde imleç, mobilde sürükleme deltası — ikisi de aimRef'e yazılır
+  const aimRef = useRef({ x: 0, y: 0 })
+  const [isTouch, setIsTouch] = useState(false)
+  const lastTouch = useRef({ x: 0, y: 0 })
+
+  useEffect(() => {
+    setIsTouch(window.matchMedia('(pointer: coarse)').matches)
+  }, [])
+
+  const updateAimFromMouse = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType !== 'mouse') return
+    const rect = e.currentTarget.getBoundingClientRect()
+    aimRef.current.x = ((e.clientX - rect.left) / rect.width) * 2 - 1
+    aimRef.current.y = -(((e.clientY - rect.top) / rect.height) * 2 - 1)
+  }, [])
+
+  const onTouchStart = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'mouse') return
+    setIsTouch(true)
+    lastTouch.current = { x: e.clientX, y: e.clientY }
+  }, [])
+
+  const onTouchMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (e.pointerType === 'mouse') return
+      const rect = e.currentTarget.getBoundingClientRect()
+      const dx = ((e.clientX - lastTouch.current.x) / rect.width) * 2 * 1.6
+      const dy = -((e.clientY - lastTouch.current.y) / rect.height) * 2 * 1.6
+      lastTouch.current = { x: e.clientX, y: e.clientY }
+      aimRef.current.x = Math.min(Math.max(aimRef.current.x + dx, -1), 1)
+      aimRef.current.y = Math.min(Math.max(aimRef.current.y + dy, -1), 1)
+    },
+    []
+  )
+
   const submitScore = useCallback(async () => {
     if (!result || submitState !== 'idle') return
     const name = callsign.trim()
@@ -180,7 +215,7 @@ export function RangeGame() {
   const accuracy = shots ? Math.round((hits / shots) * 100) : 0
 
   return (
-    <section id="arena" className="relative py-24">
+    <section id="arena" className="relative scroll-mt-20 py-24">
       <div className="container mx-auto px-6">
         <SectionHeading
           badge="Refleks Arenası"
@@ -193,13 +228,25 @@ export function RangeGame() {
           className="relative mx-auto h-[600px] w-full max-w-md select-none overflow-hidden rounded-xl border border-border bg-[#0b0b0e] sm:h-[560px] sm:max-w-5xl"
         >
           {phase === 'playing' && (
-            <div onPointerDown={shoot} className="absolute inset-0 cursor-none">
+            <div
+              onPointerDown={(e) => {
+                onTouchStart(e)
+                if (e.pointerType === 'mouse') shoot()
+              }}
+              onPointerMove={(e) => {
+                updateAimFromMouse(e)
+                onTouchMove(e)
+              }}
+              className="absolute inset-0 cursor-none"
+              style={{ touchAction: 'none' }}
+            >
               <Suspense fallback={null}>
                 <RangeScene
                   active={phase === 'playing'}
                   elapsed={(performance.now() - startedAt.current) / 1000}
                   shotSignal={shotSignal}
                   reloadSignal={reloadSignal}
+                  aimRef={aimRef}
                   onHit={handleHit}
                   onMiss={handleMiss}
                 />
@@ -207,7 +254,7 @@ export function RangeGame() {
 
               {/* crosshair yok: gun baktığı yöne ateş eder, oyuncu tracer ile düzeltir */}
 
-              <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between p-4 font-display">
+              <div className="pointer-events-none absolute inset-x-0 top-20 flex items-center justify-between p-4 font-display sm:top-0">
                 <div className="rounded border border-primary/40 bg-background/80 px-3 py-1.5 text-lg text-primary backdrop-blur-sm">
                   {score.toLocaleString('tr-TR')}
                 </div>
@@ -241,7 +288,36 @@ export function RangeGame() {
                 İsabet: <span className="font-display text-foreground">{accuracy}%</span>
                 {' • '}
                 <span className="hidden sm:inline">R = şarjör</span>
+                <span className="sm:hidden">sürükle: nişan</span>
               </div>
+
+              {/* dokunmatik kontroller: sağ başparmak ateş, sol şarjör */}
+              {isTouch && (
+                <>
+                  <button
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.stopPropagation()
+                      shoot()
+                    }}
+                    className="absolute bottom-16 right-5 flex h-24 w-24 cursor-pointer items-center justify-center rounded-full border-2 border-primary/60 bg-primary/20 text-primary backdrop-blur-sm transition-transform duration-150 active:scale-90 active:bg-primary/40"
+                    aria-label="Ateş et"
+                  >
+                    <Crosshair className="h-10 w-10" aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.stopPropagation()
+                      reload()
+                    }}
+                    className="absolute bottom-16 left-5 flex h-16 w-16 cursor-pointer items-center justify-center rounded-full border border-border bg-background/70 text-muted-foreground backdrop-blur-sm transition-transform duration-150 active:scale-90"
+                    aria-label="Şarjör değiştir"
+                  >
+                    <RotateCcw className="h-6 w-6" aria-hidden="true" />
+                  </button>
+                </>
+              )}
             </div>
           )}
 

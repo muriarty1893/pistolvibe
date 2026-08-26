@@ -10,6 +10,7 @@ export interface RangeSceneProps {
   elapsed: number
   shotSignal: { current: number }
   reloadSignal: { current: number }
+  aimRef: { current: { x: number; y: number } }
   onHit: () => void
   onMiss: () => void
 }
@@ -166,10 +167,12 @@ function Spark({ data, onDone }: { data: Spark; onDone: (id: number) => void }) 
 function ViewModel({
   shotSignal,
   reloadSignal,
+  aimRef,
   onShoot,
 }: {
   shotSignal: { current: number }
   reloadSignal: { current: number }
+  aimRef: { current: { x: number; y: number } }
   onShoot: (origin: THREE.Vector3, dir: THREE.Vector3) => void
 }) {
   const { scene, animations } = useGLTF('/models/colt1911.glb')
@@ -238,7 +241,7 @@ function ViewModel({
 
     // imleci takip et (orta hassasiyet — gun baktığı yöne ateş eder)
     if (yawRef.current) {
-      const targetYaw = -state.pointer.x * 0.6
+      const targetYaw = -aimRef.current.x * 0.6
       yawRef.current.rotation.y = THREE.MathUtils.damp(
         yawRef.current.rotation.y,
         targetYaw,
@@ -247,7 +250,7 @@ function ViewModel({
       )
     }
     if (pitchRef.current) {
-      const targetPitch = state.pointer.y * 0.35
+      const targetPitch = aimRef.current.y * 0.35
       pitchRef.current.rotation.x = THREE.MathUtils.damp(
         pitchRef.current.rotation.x,
         targetPitch,
@@ -580,6 +583,7 @@ export function RangeScene({
   elapsed,
   shotSignal,
   reloadSignal,
+  aimRef,
   onHit,
   onMiss,
 }: RangeSceneProps) {
@@ -657,6 +661,7 @@ export function RangeScene({
         <ViewModel
           shotSignal={shotSignal}
           reloadSignal={reloadSignal}
+          aimRef={aimRef}
           onShoot={handleShoot}
         />
         <RangeEnvironment />
