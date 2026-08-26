@@ -11,6 +11,9 @@ export interface RangeSceneProps {
   shotSignal: { current: number }
   reloadSignal: { current: number }
   aimRef: { current: { x: number; y: number } }
+  /** Mobil joystick: aktifken aim bu vektörle döner */
+  joystickVec: { current: { x: number; y: number } }
+  joystickActive: { current: boolean }
   onHit: () => void
   onMiss: () => void
 }
@@ -101,33 +104,50 @@ function SteelTarget({
         <boxGeometry args={[0.55, 0.07, 0.45]} />
         <meshStandardMaterial color="#2c2c34" metalness={0.6} roughness={0.6} />
       </mesh>
-      {/* dikey çelik hedef — kameraya bakar */}
-      <group visible={active}>
-        <mesh rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[0.42, 0.42, 0.06, 32]} />
-          <meshStandardMaterial
-            color="#d8d8e2"
-            metalness={0.55}
-            roughness={0.35}
-            emissive="#9a9aa8"
-            emissiveIntensity={0.22}
-          />
-        </mesh>
-        <mesh position={[0, 0, 0.035]}>
-          <ringGeometry args={[0.24, 0.32, 32]} />
-          <meshStandardMaterial
-            color="#d4af37"
-            metalness={0.5}
-            roughness={0.35}
-            emissive="#d4af37"
-            emissiveIntensity={0.7}
-          />
-        </mesh>
-        <mesh position={[0, 0, 0.04]}>
-          <circleGeometry args={[0.1, 24]} />
-          <meshStandardMaterial color="#b02a2a" roughness={0.5} emissive="#7a1a1a" emissiveIntensity={0.5} />
-        </mesh>
-      </group>
+      {/* insan silüeti karton hedef */}
+      <HumanTargetMesh active={active} />
+    </group>
+  )
+}
+
+/** İnsan silüeti hedef (IPSC tarzı) — prosedürel karton hedef */
+function HumanTargetMesh({ active }: { active: boolean }) {
+  const { geom, cy } = useMemo(() => {
+    const s = new THREE.Shape()
+    s.moveTo(-0.11, 0.62)
+    s.quadraticCurveTo(-0.13, 0.78, 0, 0.8)
+    s.quadraticCurveTo(0.13, 0.78, 0.11, 0.62)
+    s.lineTo(0.09, 0.55)
+    s.quadraticCurveTo(0.26, 0.52, 0.3, 0.4)
+    s.lineTo(0.32, 0.12)
+    s.lineTo(0.22, 0.1)
+    s.lineTo(0.19, -0.42)
+    s.lineTo(-0.19, -0.42)
+    s.lineTo(-0.22, 0.1)
+    s.lineTo(-0.32, 0.12)
+    s.lineTo(-0.3, 0.4)
+    s.quadraticCurveTo(-0.26, 0.52, -0.09, 0.55)
+    s.closePath()
+    const g = new THREE.ExtrudeGeometry(s, { depth: 0.04, bevelEnabled: false })
+    g.center()
+    const box = new THREE.Box3().setFromBufferAttribute(g.getAttribute('position') as THREE.BufferAttribute)
+    const cy = (box.max.y + box.min.y) / 2
+    return { geom: g, cy }
+  }, [])
+
+  return (
+    <group visible={active}>
+      <mesh geometry={geom}>
+        <meshStandardMaterial color="#c9a06a" roughness={0.85} />
+      </mesh>
+      <mesh position={[0, cy - 0.02, 0.045]}>
+        <ringGeometry args={[0.09, 0.13, 24]} />
+        <meshStandardMaterial color="#f5f0e0" roughness={0.7} />
+      </mesh>
+      <mesh position={[0, cy - 0.02, 0.05]}>
+        <circleGeometry args={[0.05, 20]} />
+        <meshStandardMaterial color="#8b2020" roughness={0.6} />
+      </mesh>
     </group>
   )
 }
@@ -168,11 +188,15 @@ function ViewModel({
   shotSignal,
   reloadSignal,
   aimRef,
+  joystickVec,
+  joystickActive,
   onShoot,
 }: {
   shotSignal: { current: number }
   reloadSignal: { current: number }
   aimRef: { current: { x: number; y: number } }
+  joystickVec: { current: { x: number; y: number } }
+  joystickActive: { current: boolean }
   onShoot: (origin: THREE.Vector3, dir: THREE.Vector3) => void
 }) {
   const { scene, animations } = useGLTF('/models/colt1911.glb')
@@ -238,6 +262,20 @@ function ViewModel({
 
   useFrame((state, delta) => {
     prepared.mixer.update(delta)
+
+    // joystick (mobil): aim'i knob yönünde döndür
+    if (joystickActive.current) {
+      aimRef.current.x = THREE.MathUtils.clamp(
+        aimRef.current.x + joystickVec.current.x * 1.4 * delta,
+        -1,
+        1
+      )
+      aimRef.current.y = THREE.MathUtils.clamp(
+        aimRef.current.y + joystickVec.current.y * 1.0 * delta,
+        -1,
+        1
+      )
+    }
 
     // imleci takip et (orta hassasiyet — gun baktığı yöne ateş eder)
     if (yawRef.current) {
@@ -421,97 +459,105 @@ function ColoredProp({
 }
 
 function RangeEnvironment() {
-  const barrels = useMemo(
+  const trees = useMemo(
     () => [
-      { x: 3.0, z: -4.0, c: '#5a3d1e' },
-      { x: -3.0, z: -10.5, c: '#3d4a5a' },
+      { url: '/models/props/tree_detailed.glb', x: -7.5, z: -8, s: 3.2, r: 0.4 },
+      { url: '/models/props/tree_default.glb', x: 7.8, z: -10, s: 3.6, r: 1.2 },
+      { url: '/models/props/tree_cone.glb', x: -8.5, z: -14, s: 3.8, r: 2 },
+      { url: '/models/props/tree_detailed.glb', x: 8.2, z: -16, s: 3.4, r: 0.8 },
+      { url: '/models/props/tree_default.glb', x: -6.5, z: -18, s: 3.5, r: 1.7 },
+      { url: '/models/props/tree_cone.glb', x: 6.8, z: -4.5, s: 2.8, r: 0.2 },
     ],
     []
   )
+  const bushes = useMemo(
+    () => [
+      { x: -4.6, z: -6, s: 0.8 },
+      { x: 4.8, z: -7.5, s: 0.9 },
+      { x: -5.2, z: -12, s: 1.0 },
+      { x: 5.4, z: -13, s: 0.8 },
+      { x: 3.9, z: -3.4, s: 0.6 },
+    ],
+    []
+  )
+  const grassTufts = useMemo(() => {
+    const arr: { x: number; z: number; s: number; url: string }[] = []
+    for (let i = 0; i < 26; i++) {
+      arr.push({
+        x: (Math.sin(i * 12.9898) * 43758.5453 % 1) * 14 - 7,
+        z: -2 - (Math.abs(Math.sin(i * 78.233) * 43758.5453 % 1) * 14),
+        s: 0.5 + (i % 3) * 0.2,
+        url: i % 2 === 0 ? '/models/props/grass.glb' : '/models/props/grass_large.glb',
+      })
+    }
+    return arr
+  }, [])
+  const rocks = useMemo(
+    () => [
+      { x: -4.2, z: -15.5, s: 0.7 },
+      { x: 4.5, z: -11.5, s: 0.5 },
+    ],
+    []
+  )
+  const fences = useMemo(() => {
+    const arr: { x: number; z: number; r: number }[] = []
+    for (let i = 0; i < 6; i++) {
+      arr.push({ x: -3.9 + i * 0.001, z: -1.2 - i * 1.05, r: 0 })
+    }
+    return arr.map((f) => ({ ...f, x: -4.05 }))
+  }, [])
 
   return (
     <group>
-      {/* zemin */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -5]} receiveShadow>
-        <planeGeometry args={[24, 26]} />
-        <meshStandardMaterial color="#2a2a32" metalness={0.15} roughness={0.8} />
+      {/* çim zemin */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -7]} receiveShadow>
+        <planeGeometry args={[40, 44]} />
+        <meshStandardMaterial color="#5d8a44" roughness={0.95} />
       </mesh>
-      {/* atış şeritleri */}
+      {/* atış şeritleri — açık hava için soluk */}
       {[-1.8, 0, 1.8].map((x) => (
         <mesh key={x} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.01, -6]}>
-          <planeGeometry args={[0.06, 16]} />
-          <meshStandardMaterial color="#d4af37" emissive="#8a6d1f" emissiveIntensity={0.55} />
+          <planeGeometry args={[0.07, 15]} />
+          <meshStandardMaterial color="#e8e4d0" roughness={0.9} />
         </mesh>
       ))}
-      {/* yan duvarlar */}
-      {[-3.6, 3.6].map((x) => (
-        <mesh key={x} position={[x, 2.4, -6]}>
-          <boxGeometry args={[0.35, 4.8, 18]} />
-          <meshStandardMaterial color="#32323c" roughness={0.85} metalness={0.2} />
-        </mesh>
-      ))}
-      {/* yan duvar panel çizgileri */}
-      {[-3.4, 3.4].map((x) =>
-        [1.2, 2.4].map((y) => (
-          <mesh key={`${x}-${y}`} position={[x, y, -6]}>
-            <boxGeometry args={[0.02, 0.05, 17.6]} />
-            <meshStandardMaterial color="#d4af37" emissive="#d4af37" emissiveIntensity={0.5} />
-          </mesh>
-        ))
-      )}
-      {/* tavan */}
-      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 4.8, -6]}>
-        <planeGeometry args={[7.6, 18]} />
-        <meshStandardMaterial color="#1c1c23" roughness={0.9} />
-      </mesh>
-      {/* tavan ışık bantları */}
-      {[-1.9, 1.9].map((x) => (
-        <mesh key={x} rotation={[Math.PI / 2, 0, 0]} position={[x, 4.75, -6]}>
-          <planeGeometry args={[0.5, 14]} />
-          <meshStandardMaterial color="#fff3d6" emissive="#ffe9b8" emissiveIntensity={1.6} />
-        </mesh>
-      ))}
-      {/* arka duvar */}
-      <mesh position={[0, 2.4, -14.8]}>
-        <planeGeometry args={[8, 4.8]} />
-        <meshStandardMaterial color="#23232b" roughness={0.9} />
-      </mesh>
-      {/* arka duvar hedef bölmeleri */}
-      {[-2.4, -0.8, 0.8, 2.4].map((x) => (
-        <group key={x} position={[x, 1.6, -14.7]}>
-          <planeGeometry args={[1.2, 2.4]} />
-          <meshStandardMaterial color="#2e2e38" roughness={0.85} metalness={0.15} />
+      {/* gökyüzü rengine uyumlu sis + açık hava ışığı Canvas'ta */}
+
+      {/* ağaçlar — saha çevresi */}
+      {trees.map((t, i) => (
+        <group key={i} position={[t.x, 0, t.z]} rotation={[0, t.r, 0]}>
+          <ColoredProp url={t.url} color="#3f6b2e" roughness={0.9} scale={t.s} />
         </group>
       ))}
-      {/* Kenney CC0 sandıklar — askeri yeşil tonları */}
-      <group position={[-2.9, 0, -4.2]} rotation={[0, 0.4, 0]}>
-        <ColoredProp url="/models/props/crate-wide.glb" color="#4a5240" scale={0.62} />
-      </group>
-      <group position={[-2.55, 0.34, -3.6]} rotation={[0, -0.25, 0]}>
-        <ColoredProp url="/models/props/crate-medium.glb" color="#3e4636" scale={0.42} />
-      </group>
-      <group position={[2.9, 0, -9.5]} rotation={[0, 0.9, 0]}>
-        <ColoredProp url="/models/props/crate-wide.glb" color="#4a5240" scale={0.66} />
-      </group>
-      <group position={[2.6, 0, -10.3]} rotation={[0, 0.15, 0]}>
-        <ColoredProp url="/models/props/crate-medium.glb" color="#52422c" scale={0.48} />
-      </group>
-      {/* arka duvar dekor hedefleri (Kenney) */}
-      <group position={[-2.4, 1.7, -14.55]} rotation={[0, 0, 0]}>
-        <ColoredProp url="/models/props/target-detail.glb" color="#d8d8e2" metalness={0.5} roughness={0.4} scale={0.85} />
-      </group>
-      <group position={[0.8, 1.7, -14.55]}>
-        <ColoredProp url="/models/props/target-large.glb" color="#c9c9d4" metalness={0.5} roughness={0.4} scale={0.9} />
-      </group>
-      <group position={[2.4, 1.7, -14.55]}>
-        <ColoredProp url="/models/props/target-detail.glb" color="#b8b8c4" metalness={0.5} roughness={0.4} scale={0.7} />
-      </group>
-      {/* variller */}
-      {barrels.map((b, i) => (
-        <mesh key={i} position={[b.x, 0.45, b.z]}>
-          <cylinderGeometry args={[0.28, 0.28, 0.9, 18]} />
-          <meshStandardMaterial color={b.c} roughness={0.6} metalness={0.35} />
-        </mesh>
+      {/* çalılar */}
+      {bushes.map((b, i) => (
+        <group key={i} position={[b.x, 0, b.z]}>
+          <ColoredProp url="/models/props/plant_bush.glb" color="#4a7a38" roughness={0.9} scale={b.s} />
+        </group>
+      ))}
+      {/* çim öbekleri */}
+      {grassTufts.map((g, i) => (
+        <group key={i} position={[g.x, 0, g.z]}>
+          <ColoredProp url={g.url} color="#6b9a4a" roughness={0.95} scale={g.s} />
+        </group>
+      ))}
+      {/* kayalar */}
+      {rocks.map((r, i) => (
+        <group key={i} position={[r.x, 0.1, r.z]} rotation={[0, i * 1.3, 0]}>
+          <ColoredProp url="/models/props/rock_smallA.glb" color="#8a8a80" roughness={0.9} scale={r.s} />
+        </group>
+      ))}
+      {/* oyuncunun arkasına ahşap çit */}
+      {fences.map((f, i) => (
+        <group key={i} position={[f.x, 0, f.z]}>
+          <ColoredProp url="/models/props/fence_simple.glb" color="#7a5c38" roughness={0.85} scale={1.05} />
+        </group>
+      ))}
+      {/* Kenney hedef pankartları arka duvar yerine: uzak sıra ağaç duvarı */}
+      {[-6, -3, 0, 3, 6].map((x, i) => (
+        <group key={x} position={[x, 0, -20 - (i % 2)]} rotation={[0, i % 2 === 0 ? 0.1 : -0.1, 0]}>
+          <ColoredProp url="/models/props/tree_cone.glb" color="#35592a" roughness={0.9} scale={4.2} />
+        </group>
       ))}
     </group>
   )
@@ -584,6 +630,8 @@ export function RangeScene({
   shotSignal,
   reloadSignal,
   aimRef,
+  joystickVec,
+  joystickActive,
   onHit,
   onMiss,
 }: RangeSceneProps) {
@@ -647,21 +695,22 @@ export function RangeScene({
       gl={{ antialias: true }}
       style={{ cursor: 'none' }}
     >
-      <color attach="background" args={[0x0b0b0e]} />
-      <fog attach="fog" args={[0x0b0b0e, 11, 26]} />
+      <color attach="background" args={[0x9ec8e8]} />
+      <fog attach="fog" args={[0x9ec8e8, 18, 42]} />
 
       <Suspense fallback={null}>
         <CameraFit />
         <Spawner active={active} elapsed={elapsed} setTargets={setTargets} />
-        <hemisphereLight intensity={0.55} groundColor={0x1a1a20} />
-        <directionalLight position={[4, 6, 2]} intensity={1.6} color="#fff1cc" />
-        <directionalLight position={[-5, 3, -4]} intensity={1} color="#d4af37" />
-        <pointLight position={[0, 4.2, -6]} intensity={30} color="#ffe2a0" distance={16} />
+        <hemisphereLight intensity={0.9} groundColor={0x3d5a2e} />
+        <directionalLight position={[6, 9, 3]} intensity={2.4} color="#fff5e0" />
+        <directionalLight position={[-6, 4, -4]} intensity={0.8} color="#cfe5ff" />
 
         <ViewModel
           shotSignal={shotSignal}
           reloadSignal={reloadSignal}
           aimRef={aimRef}
+          joystickVec={joystickVec}
+          joystickActive={joystickActive}
           onShoot={handleShoot}
         />
         <RangeEnvironment />

@@ -185,6 +185,33 @@ export function RangeGame() {
     []
   )
 
+  // joystick: knob vektörü ViewModel frame döngüsünde aim'i döndürür (rate control)
+  const joystickActive = useRef(false)
+  const [knob, setKnob] = useState({ x: 0, y: 0 })
+  const joystickVec = useRef({ x: 0, y: 0 })
+
+  const updateJoystick = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const cx = rect.left + rect.width / 2
+    const cy = rect.top + rect.height / 2
+    const maxR = rect.width / 2 - 14
+    let dx = e.clientX - cx
+    let dy = e.clientY - cy
+    const len = Math.hypot(dx, dy)
+    if (len > maxR) {
+      dx = (dx / len) * maxR
+      dy = (dy / len) * maxR
+    }
+    setKnob({ x: dx, y: dy })
+    joystickVec.current = { x: dx / maxR, y: -dy / maxR }
+  }, [])
+
+  const resetJoystick = useCallback(() => {
+    joystickActive.current = false
+    setKnob({ x: 0, y: 0 })
+    joystickVec.current = { x: 0, y: 0 }
+  }, [])
+
   const submitScore = useCallback(async () => {
     if (!result || submitState !== 'idle') return
     const name = callsign.trim()
@@ -247,6 +274,8 @@ export function RangeGame() {
                   shotSignal={shotSignal}
                   reloadSignal={reloadSignal}
                   aimRef={aimRef}
+                  joystickVec={joystickVec}
+                  joystickActive={joystickActive}
                   onHit={handleHit}
                   onMiss={handleMiss}
                 />
@@ -291,9 +320,29 @@ export function RangeGame() {
                 <span className="sm:hidden">sürükle: nişan</span>
               </div>
 
-              {/* dokunmatik kontroller: sağ başparmak ateş, sol şarjör */}
+              {/* dokunmatik kontroller: sol joystick nişan, sağ başparmak ateş */}
               {isTouch && (
                 <>
+                  {/* nişan joystick'i */}
+                  <div
+                    className="absolute bottom-10 left-5 h-32 w-32 touch-none rounded-full border-2 border-primary/40 bg-background/50 backdrop-blur-sm"
+                    onPointerDown={(e) => {
+                      e.stopPropagation()
+                      ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+                      joystickActive.current = true
+                      updateJoystick(e)
+                    }}
+                    onPointerMove={(e) => {
+                      if (joystickActive.current) updateJoystick(e)
+                    }}
+                    onPointerUp={resetJoystick}
+                    onPointerCancel={resetJoystick}
+                  >
+                    <div
+                      className="pointer-events-none absolute left-1/2 top-1/2 h-14 w-14 rounded-full border-2 border-primary/70 bg-primary/30"
+                      style={{ transform: `translate(-50%, -50%) translate(${knob.x}px, ${knob.y}px)` }}
+                    />
+                  </div>
                   <button
                     type="button"
                     onPointerDown={(e) => {
@@ -304,17 +353,6 @@ export function RangeGame() {
                     aria-label="Ateş et"
                   >
                     <Crosshair className="h-10 w-10" aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    onPointerDown={(e) => {
-                      e.stopPropagation()
-                      reload()
-                    }}
-                    className="absolute bottom-16 left-5 flex h-16 w-16 cursor-pointer items-center justify-center rounded-full border border-border bg-background/70 text-muted-foreground backdrop-blur-sm transition-transform duration-150 active:scale-90"
-                    aria-label="Şarjör değiştir"
-                  >
-                    <RotateCcw className="h-6 w-6" aria-hidden="true" />
                   </button>
                 </>
               )}
