@@ -7,7 +7,7 @@ export function Footer() {
         <img src="/assets/logo-nobg.png" alt="Pistol Vibe logosu" className="h-14 w-14 gold-glow-sm" />
         <div>
           <p className="font-display text-lg uppercase tracking-wide">
-            Pistol <span className="text-gold-gradient">Vibe</span>
+            Pistol <span className="text-[#e8bf4d]">Vibe</span>
           </p>
           <p className="mt-1 text-xs uppercase tracking-[0.3em] text-muted-foreground">
             Sadece Tabanca

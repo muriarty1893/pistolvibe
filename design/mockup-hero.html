@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pistolvibe — Hero Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  /* COMMIT-SHEET token'ları — onaylırsa proje token'ları bunlar olur */
+  :root {
+    --bg: #0b0b0e;            /* L ≈ 0.13 — gece arena */
+    --gold: #d4af37;
+    --gold-dim: #a8811f;
+    --ink: #e8e6df;
+    --ink-muted: #b9b5aa;
+    --hairline: rgba(212, 175, 55, 0.35);
+    --font-display: 'Russo One', system-ui, sans-serif;
+    --font-text: 'Chakra Petch', system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--ink); font-family: var(--font-text); }
+  .hero { position: relative; min-height: 100vh; overflow: hidden; display: flex; align-items: stretch; }
+
+  /* grid break: glock bloğu sol kolonu kesip viewport kenarına taşar */
+  .stage {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 70% 55% at 68% 42%, rgba(212,175,55,0.07), transparent 65%),
+      var(--bg);
+  }
+  /* 3D sahnenin yer tutucusu — düz renk blok (mockup kuralı) */
+  .scene-slot {
+    position: absolute;
+    top: 0; bottom: 0; left: -6%;
+    width: 58%;
+    background: #121218;
+    box-shadow: inset -1px 0 0 var(--hairline);
+  }
+  .scene-slot .stage-label {
+    position: absolute; left: 50%; bottom: 18%;
+    transform: translateX(-50%);
+    font-family: var(--font-text); font-size: 11px; letter-spacing: 0.3em;
+    color: var(--gold-dim); text-transform: uppercase; white-space: nowrap;
+  }
+  .copy {
+    position: relative; z-index: 1;
+    margin-left: 52%;
+    padding: 0 6vw 0 0;
+    display: flex; flex-direction: column; justify-content: center;
+    min-height: 100vh; max-width: 780px;
+  }
+  .kicker {
+    font-size: 12px; letter-spacing: 0.35em; text-transform: uppercase;
+    color: var(--ink-muted); margin-bottom: 18px;
+  }
+  h1 {
+    font-family: var(--font-display); font-weight: 400;
+    font-size: clamp(44px, 6.2vw, 92px);
+    line-height: 0.98; letter-spacing: -0.02em;
+    color: var(--ink); text-transform: uppercase;
+    text-wrap: balance;
+  }
+  h1 .gold { color: var(--gold); }
+  .sub {
+    margin-top: 22px; font-size: 17px; line-height: 1.55;
+    color: var(--ink-muted); max-width: 46ch;
+  }
+  .rule { margin-top: 34px; height: 1px; width: 120px; background: var(--gold); }
+  .meta {
+    margin-top: 14px; font-size: 12px; letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--ink-muted);
+  }
+  .letterbox {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 26px;
+    background: #000; border-top: 1px solid var(--hairline);
+  }
+  /* 390 mobil: blok arkaya, yazı öne — tek kolon */
+  @media (max-width: 768px) {
+    .scene-slot { left: -20%; width: 90%; opacity: 0.5; }
+    .copy { margin: 0; padding: 0 24px; }
+    h1 { font-size: clamp(40px, 12vw, 64px); }
+  }
+</style>
+</head>
+<body>
+<section class="hero">
+  <div class="stage"></div>
+  <div class="scene-slot" aria-hidden="true">
+    <span class="stage-label">3B Sahne · Glock, low-angle</span>
+  </div>
+  <div class="copy">
+    <p class="kicker">Airsoft Takımı • Adana</p>
+    <h1>Sadece <span class="gold">Tabanca</span></h1>
+    <p class="sub">Tüfek yok, sniper yok. Yakın mesafede tam konsantrasyon. A.T.A, Adana'da pistol-only CQB oynayan bir airsoft takımıdır.</p>
+    <div class="rule"></div>
+    <p class="meta">A.T.A Pistol Team · Kaydır: Sahne 2</p>
+  </div>
+  <div class="letterbox"></div>
+</section>
+</body>
+</html>

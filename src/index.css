@@ -42,12 +42,6 @@
 }
 
 @layer utilities {
-  .text-gold-gradient {
-    background: linear-gradient(135deg, #f5d876 0%, #d4af37 45%, #a8811f 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
   /* SplitText char konteynerleri için altın gradyan
      NOT: char-bazlı bg-clip:text, font-swap + force3D kombinasyonunda hayalet glif
      artefaktı üretiyor (sol-ilk harf). Bunun yerine katmanlı düz renk + text-shadow. */

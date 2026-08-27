@@ -125,7 +125,7 @@ export default function AdminApp() {
                 <Lock className="h-6 w-6 text-primary" aria-hidden="true" />
               </div>
               <h1 className="font-display text-xl uppercase tracking-wide">
-                Pistol <span className="text-gold-gradient">Vibe</span> Admin
+                Pistol <span className="text-[#e8bf4d]">Vibe</span> Admin
               </h1>
               <p className="text-sm text-muted-foreground">Devam etmek için şifreyi gir.</p>
             </div>
@@ -157,7 +157,7 @@ export default function AdminApp() {
           <div className="flex items-center gap-3">
             <img src="/assets/logo-nobg.png" alt="Pistol Vibe" className="h-9 w-9 gold-glow-sm" />
             <span className="font-display text-sm uppercase tracking-widest">
-              Pistol <span className="text-gold-gradient">Vibe</span> Admin
+              Pistol <span className="text-[#e8bf4d]">Vibe</span> Admin
             </span>
           </div>
           <div className="flex items-center gap-2">

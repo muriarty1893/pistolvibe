@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Menu, X } from 'lucide-react'
+import gsap from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
 import { Button } from '@/components/ui/button'
 import { RollingText } from '@/components/RollingText'
 import { cn } from '@/lib/utils'
+
+gsap.registerPlugin(ScrollTrigger)
 
 const LINKS = [
   { href: '#cephanelik', label: 'Cephanelik' },
@@ -17,11 +21,16 @@ export function Navbar() {
   const [open, setOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
 
+  // scroll listener yerine ScrollTrigger (auteur RAW_SCROLL_LISTENER kapısı)
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24)
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
+    const st = ScrollTrigger.create({
+      trigger: document.body,
+      start: '25 top',
+      end: 'max',
+      onToggle: (self) => setScrolled(self.isActive),
+    })
+    setScrolled(window.scrollY > 24)
+    return () => st.kill()
   }, [])
 
   return (
@@ -38,7 +47,7 @@ export function Navbar() {
         <a href="#anasayfa" className="flex cursor-pointer items-center gap-3">
           <img src="/assets/logo-nobg.png" alt="Pistol Vibe logosu" className="h-10 w-10 gold-glow-sm" />
           <span className="font-display text-sm uppercase tracking-widest text-foreground sm:text-base">
-            Pistol <span className="text-gold-gradient">Vibe</span>
+            Pistol <span className="text-[#e8bf4d]">Vibe</span>
           </span>
         </a>
 

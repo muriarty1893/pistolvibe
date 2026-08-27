@@ -22,7 +22,7 @@ export function Sponsors() {
                   'radial-gradient(ellipse 60% 60% at 50% 50%, rgba(212,175,55,0.1), transparent 70%)',
               }}
             />
-            <p className="relative font-display text-4xl uppercase tracking-wide text-gold-gradient sm:text-6xl">
+            <p className="relative font-display text-4xl uppercase tracking-wide text-[#e8bf4d] sm:text-6xl">
               #İşbirliği
             </p>
             <p className="relative mx-auto mt-6 max-w-md text-sm text-muted-foreground sm:text-base">

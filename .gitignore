@@ -4,3 +4,4 @@ dist
 .env
 colt_1911.glb
 server/data/
+shots/

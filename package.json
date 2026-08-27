@@ -7,7 +7,8 @@
     "dev": "concurrently -n web,api -c yellow,green \"vite\" \"node server/index.js\"",
     "build": "vite build",
     "start": "NODE_ENV=production node server/index.js",
-    "server": "node server/index.js"
+    "server": "node server/index.js",
+    "postbuild": "node scripts/allow-vendor-scroll.mjs"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
@@ -46,6 +47,7 @@
     "autoprefixer": "^10.4.20",
     "concurrently": "^9.0.1",
     "obj2gltf": "^3.2.0",
+    "playwright": "^1.55.0",
     "playwright-core": "^1.62.1",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.14",

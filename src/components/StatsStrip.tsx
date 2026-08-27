@@ -26,7 +26,7 @@ export function StatsStrip() {
             <Reveal key={stat.label} delay={i * 100}>
               <div className="rounded-lg border border-border bg-card/60 p-6 text-center transition-colors duration-200 hover:border-primary/50">
                 <stat.icon className="mx-auto h-6 w-6 text-primary" aria-hidden="true" />
-                <p className="mt-4 font-display text-3xl text-gold-gradient sm:text-4xl">
+                <p className="mt-4 font-display text-3xl text-[#e8bf4d] sm:text-4xl">
                   <Suspense fallback={<span>{stat.value.toLocaleString('tr-TR')}{stat.suffix}</span>}>
                     <CountUp
                       to={stat.value}

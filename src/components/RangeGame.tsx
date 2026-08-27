@@ -467,7 +467,7 @@ export function RangeGame() {
                 <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
                   Seri Bitti{handle.trim() ? ` — @${handle.trim()}` : ''}
                 </p>
-                <p className="mt-2 font-display text-5xl text-gold-gradient sm:text-6xl">
+                <p className="mt-2 font-display text-5xl text-[#e8bf4d] sm:text-6xl">
                   {result.score.toLocaleString('tr-TR')}
                 </p>
                 <p className="mt-3 text-sm text-muted-foreground">
