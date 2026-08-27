@@ -6,12 +6,9 @@ import { useGSAP } from '@gsap/react'
 import { Button } from '@/components/ui/button'
 import SplitText from '@/components/bits/SplitText'
 import { RollingText } from '@/components/RollingText'
+import { HeroSceneGate, CinematicHeroScene } from '@/components/three/HeroSceneGate'
 
 gsap.registerPlugin(ScrollTrigger, useGSAP)
-
-const CinematicHeroScene = lazy(() =>
-  import('@/components/three/CinematicHeroScene').then((m) => ({ default: m.CinematicHeroScene }))
-)
 
 /** overlay opaklık eğrileri — direkt stil yazar, re-render yok */
 function ramp(p: number, a: number, b: number) {
@@ -27,6 +24,8 @@ export function Hero() {
   const barTopRef = useRef<HTMLDivElement>(null)
   const barBotRef = useRef<HTMLDivElement>(null)
   const [reduced, setReduced] = useState(false)
+  const [sceneOff, setSceneOff] = useState(false)
+  const handleSceneUnavailable = useRef(() => setSceneOff(true)).current
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -77,15 +76,18 @@ export function Hero() {
   )
 
   const copyAOpacity = reduced ? 1 : 1 // JS-on'da onUpdate yönetir; ilk boyama görünür
-  const staticCta = reduced // reduced-motion: tek karede CTA da görünür
+  const staticCta = reduced || sceneOff // WebGL yoksa da kapı görünür
 
   return (
     <section id="anasayfa" className="relative">
       <div ref={pinRef} className="relative h-screen overflow-hidden bg-[#0b0b0e]">
-        {/* 3B sinematik sahne — tek WebGL context */}
-        <Suspense fallback={null}>
+        {/* 3B sinematik sahne — tek WebGL context; WebGL/chunk patlarsa statik kare */}
+        <HeroSceneGate
+          fallback={<div className="absolute inset-0 bg-[#0b0b0e]" aria-hidden="true" />}
+          onUnavailable={handleSceneUnavailable}
+        >
           <CinematicHeroScene progressRef={progressRef} reduced={reduced} />
-        </Suspense>
+        </HeroSceneGate>
 
         {/* okunabilirlik vignette'i (marka hue'sunda koyu, degrade değil düz katman + kenar silme) */}
         <div
