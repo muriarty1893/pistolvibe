@@ -1,208 +1,190 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { useGSAP } from '@gsap/react'
+import { lazy, Suspense, useEffect, useState } from 'react'
+import { Crosshair, ShieldCheck, Users } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import SplitText from '@/components/bits/SplitText'
 import { RollingText } from '@/components/RollingText'
-import { HeroSceneGate, CinematicHeroScene } from '@/components/three/HeroSceneGate'
+import { Reveal } from '@/components/Reveal'
 
-gsap.registerPlugin(ScrollTrigger, useGSAP)
+const DualPistolViewer = lazy(() =>
+  import('@/components/three/PistolViewer').then((m) => ({ default: m.DualPistolViewer }))
+)
+const Particles = lazy(() => import('@/components/bits/Particles'))
+const SplitText = lazy(() => import('@/components/bits/SplitText'))
 
-/** overlay opaklık eğrileri — direkt stil yazar, re-render yok */
-function ramp(p: number, a: number, b: number) {
-  return Math.min(Math.max((p - a) / (b - a), 0), 1)
-}
+const PILLARS = [
+  {
+    icon: Crosshair,
+    title: 'Sadece Tabanca',
+    text: 'Tüfek yok, sniper yok. Yakın mesafe, tam konsantrasyon — CQB’nin en saf hali.',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Fair Play',
+    text: 'Hit aldım demek erdemdir. Sahada saygı ve dürüstlük her şeyden önce gelir.',
+  },
+  {
+    icon: Users,
+    title: 'Kardeşlik',
+    text: 'Sahada bir ekip, saha dışında bir aile. Birlikte oynar, birlikte öğreniriz.',
+  },
+]
 
-export function Hero() {
-  const pinRef = useRef<HTMLDivElement>(null)
-  const progressRef = useRef(0)
-  const copyARef = useRef<HTMLDivElement>(null)
-  const copyBRef = useRef<HTMLDivElement>(null)
-  const copyCRef = useRef<HTMLDivElement>(null)
-  const barTopRef = useRef<HTMLDivElement>(null)
-  const barBotRef = useRef<HTMLDivElement>(null)
-  const [reduced, setReduced] = useState(false)
-  const [sceneOff, setSceneOff] = useState(false)
-  const handleSceneUnavailable = useRef(() => setSceneOff(true)).current
-
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(false)
   useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const update = () => setReduced(mq.matches)
+    const mq = window.matchMedia('(min-width: 768px)')
+    const update = () => setIsDesktop(mq.matches)
     update()
     mq.addEventListener('change', update)
     return () => mq.removeEventListener('change', update)
   }, [])
+  return isDesktop
+}
 
-  useGSAP(
-    () => {
-      if (reduced || !pinRef.current) return
-      const mm = gsap.matchMedia()
-      mm.add('(prefers-reduced-motion: no-preference)', () => {
-        const set = (el: HTMLElement | null, css: Partial<CSSStyleDeclaration>) => {
-          if (el) Object.assign(el.style, css)
-        }
-        const st = ScrollTrigger.create({
-          trigger: pinRef.current!,
-          start: 'top top',
-          end: () => (window.innerWidth < 768 ? '+=1700' : '+=2700'),
-          pin: true,
-          scrub: 0.5,
-          anticipatePin: 1,
-          onUpdate: (self) => {
-            const p = self.progress
-            progressRef.current = p
-            // Sahne 1 yazısı: ilk karede tam, kamera kalkarken söner
-            const a = 1 - ramp(p, 0.13, 0.2)
-            set(copyARef.current, { opacity: String(a), transform: `translateY(${-40 * ramp(p, 0.1, 0.3)}px)` })
-            // Sahne 2 yazısı: orta bantta
-            const b = ramp(p, 0.3, 0.4) * (1 - ramp(p, 0.66, 0.74))
-            set(copyBRef.current, { opacity: String(b) })
-            // Sahne 3: kapı
-            const c = ramp(p, 0.84, 0.93)
-            set(copyCRef.current, { opacity: String(c), pointerEvents: c > 0.6 ? 'auto' : 'none' })
-            // letterbox: peak girişinde kapanır, kapıda açılır
-            const lb = ramp(p, 0.16, 0.24) * (1 - ramp(p, 0.8, 0.88))
-            set(barTopRef.current, { transform: `scaleY(${0.35 + lb * 0.65})` })
-            set(barBotRef.current, { transform: `scaleY(${0.35 + lb * 0.65})` })
-          },
-        })
-        return () => st.kill()
-      })
-      return () => mm.revert()
-    },
-    { dependencies: [reduced] }
-  )
-
-  const copyAOpacity = reduced ? 1 : 1 // JS-on'da onUpdate yönetir; ilk boyama görünür
-  const staticCta = reduced || sceneOff // WebGL yoksa da kapı görünür
-
+function HeroGuns() {
+  const [mounted, setMounted] = useState(false)
+  const isDesktop = useIsDesktop()
+  useEffect(() => {
+    const id = window.setTimeout(() => setMounted(true), 300)
+    return () => window.clearTimeout(id)
+  }, [])
+  if (!mounted) return null
   return (
-    <section id="anasayfa" className="relative">
-      <div ref={pinRef} className="relative h-screen overflow-hidden bg-[#0b0b0e]">
-        {/* 3B sinematik sahne — tek WebGL context; WebGL/chunk patlarsa statik kare */}
-        <HeroSceneGate
-          fallback={<div className="absolute inset-0 bg-[#0b0b0e]" aria-hidden="true" />}
-          onUnavailable={handleSceneUnavailable}
-        >
-          <CinematicHeroScene progressRef={progressRef} reduced={reduced} />
-        </HeroSceneGate>
+    <Suspense fallback={null}>
+      <DualPistolViewer
+        className="absolute inset-0"
+        guns={
+          isDesktop
+            ? [
+                {
+                  url: '/models/9mm_pistol.glb',
+                  muzzle: -1,
+                  size: 1.55,
+                  position: [-1.75, -0.7, 0],
+                  spin: 0.32,
+                  phase: 0,
+                  tilt: -0.5,
+                },
+                {
+                  url: '/models/colt_m1911.glb',
+                  muzzle: -1,
+                  size: 1.55,
+                  position: [1.75, -0.7, 0],
+                  spin: -0.32,
+                  phase: 2.1,
+                  tilt: 0.5,
+                },
+              ]
+            : [
+                {
+                  url: '/models/9mm_pistol.glb',
+                  muzzle: -1,
+                  size: 1.15,
+                  position: [0, -0.7, 0],
+                  spin: 0.3,
+                  phase: 0,
+                  tilt: -0.5,
+                },
+              ]
+        }
+      />
+    </Suspense>
+  )
+}
 
-        {/* okunabilirlik vignette'i (marka hue'sunda koyu, degrade değil düz katman + kenar silme) */}
-        <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-48"
-          style={{ background: 'linear-gradient(to top, rgba(11,11,14,0.92), rgba(11,11,14,0))' }}
+function HeroParticles() {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    const id = window.setTimeout(() => setMounted(true), 600)
+    return () => window.clearTimeout(id)
+  }, [])
+  if (!mounted) return null
+  return (
+    <div className="pointer-events-none absolute inset-0 opacity-50">
+      <Suspense fallback={null}>
+        <Particles
+          particleCount={180}
+          particleSpread={12}
+          speed={0.08}
+          particleColors={['#d4af37', '#f5d876', '#8a6d1f']}
+          moveParticlesOnHover
+          particleBaseSize={30}
+          sizeRandomness={0.6}
+          alphaParticles
         />
+      </Suspense>
+    </div>
+  )
+}
 
-        {/* letterbox bantları */}
-        <div
-          ref={barTopRef}
-          className="pointer-events-none absolute inset-x-0 top-0 h-[26px] origin-top bg-black"
-          style={{ transform: 'scaleY(0.35)' }}
-        />
-        <div
-          ref={barBotRef}
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-[26px] origin-bottom bg-black"
-          style={{ transform: 'scaleY(0.35)' }}
-        />
+export function Hero() {
+  return (
+    <section id="anasayfa" className="relative overflow-hidden bg-grid">
+      <HeroParticles />
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(ellipse 60% 50% at 50% 30%, rgba(212,175,55,0.12), transparent 70%)',
+        }}
+      />
+      <HeroGuns />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background to-transparent" />
 
-        {/* Sahne 1 — split-asymmetric: yazı sağda, glock solda sahnede */}
-        <div
-          ref={copyARef}
-          className="pointer-events-none absolute inset-0 z-10 flex items-center"
-          style={{ opacity: copyAOpacity }}
-        >
-          <div className="ml-auto w-full max-w-[46rem] px-6 pr-[6vw] sm:px-0">
-            <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground sm:text-sm">
-              Airsoft Takımı • Adana
-            </p>
-            <h1 className="mt-4 font-display text-[clamp(40px,6vw,88px)] uppercase leading-[0.98] tracking-[-0.02em] text-foreground">
-              Sadece <span className="text-[#d4af37]">Tabanca</span>
-            </h1>
-            <div className="gold-glow-sm">
-              <Suspense
-                fallback={
-                  <p className="mt-3 font-display uppercase text-[#e8bf4d]" style={{ fontSize: 'clamp(20px,2.4vw,32px)' }}>
-                    Pistol-only CQB
-                  </p>
-                }
-              >
-                <SplitText
-                  text="Pistol-only CQB"
-                  className="mt-3 inline-block font-display uppercase text-[clamp(20px,2.4vw,32px)] tracking-[0.04em] text-[#e8bf4d]"
-                  delay={40}
-                  duration={0.8}
-                  splitType="chars"
-                  from={{ opacity: 0, y: 40 }}
-                  to={{ opacity: 1, y: 0 }}
-                  textAlign="left"
-                />
-              </Suspense>
-            </div>
-            <p className="mt-6 max-w-[46ch] text-base text-muted-foreground sm:text-lg">
-              Tüfek yok, sniper yok. Yakın mesafede tam konsantrasyon. A.T.A, Adana'da
-              pistol-only CQB oynayan bir airsoft takımıdır.
-            </p>
-          </div>
-        </div>
-
-        {/* Sahne 2 — pinned-canvas: asimetrik alt-sol mikro blok */}
-        <div
-          ref={copyBRef}
-          className="pointer-events-none absolute bottom-24 left-6 z-10 sm:left-16"
-          style={{ opacity: 0 }}
-        >
-          <p className="font-display text-3xl uppercase text-foreground sm:text-5xl">
-            İki mevsim, <span className="text-[#d4af37]">tek kural</span>
+      <div className="container relative mx-auto flex min-h-screen flex-col items-center justify-center px-6 pb-20 pt-32 text-center">
+        <Reveal>
+          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground sm:text-sm">
+            Airsoft Takımı • Adana
           </p>
-          <p className="mt-3 max-w-[40ch] text-sm text-muted-foreground sm:text-base">
-            Pistol-only CQB. İsabet kasettir, ekip ailedir.
-          </p>
-          <p className="mt-4 text-xs uppercase tracking-[0.3em] text-muted-foreground/80">
-            A.T.A · Adana
-          </p>
-        </div>
-
-        {/* Sahne 3 — centred-type kapı: CTA */}
-        <div
-          ref={copyCRef}
-          className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-6 text-center"
-          style={{ opacity: 0 }}
-        >
-          <div style={{ textShadow: '0 1px 8px rgba(11,11,14,0.9), 0 0 24px rgba(11,11,14,0.7)' }}>
-            <p className="text-xs uppercase tracking-[0.3em] text-[#cfcabc]">Arena açık</p>
-            <h2 className="mt-3 font-display text-4xl uppercase text-foreground sm:text-6xl">
-              Refleksini <span className="text-[#d4af37]">kanıtla</span>
-            </h2>
-            <p className="mx-auto mt-4 max-w-[44ch] text-sm text-muted-foreground sm:text-base">
-              Instagram adınla gir, skorun tabloya yazılsın.
-            </p>          </div>
-          <div className="flex flex-col items-center gap-4 sm:flex-row">
-            <Button asChild size="lg">
-              <a href="#arena">
-                <RollingText text="Refleksini Test Et" />
-              </a>
-            </Button>
-            <Button asChild size="lg" variant="outline">
-              <a href="#basvuru">
-                <RollingText text="Hemen Başvur" />
-              </a>
-            </Button>
+          <h1 className="mt-4 font-display text-2xl uppercase tracking-wide text-foreground sm:text-4xl">
+            A.T.A Pistol Team
+          </h1>
+          <div className="hero-title-glow">
+            <Suspense fallback={null}>
+              <SplitText
+                text="SADECE TABANCA"
+                className="split-gold mt-2 inline-block font-display uppercase text-[clamp(3rem,10vw,8rem)] leading-[1.05] tracking-[-0.02em]"
+                delay={45}
+                duration={0.9}
+                splitType="chars"
+                from={{ opacity: 0, y: 60 }}
+                to={{ opacity: 1, y: 0 }}
+                textAlign="center"
+              />
+            </Suspense>
           </div>
-        </div>
+          <p className="mx-auto mt-6 max-w-xl text-base text-muted-foreground sm:text-lg">
+            Tüfek yok, sniper yok. Sadece tabanca, refleks ve cesaret. Adana&apos;nın tek tabanca-only
+            airsoft ekibine hoş geldin.
+          </p>
+        </Reveal>
 
-        {/* reduced-motion statik CTA — film oynamazsa da kapı görünür */}
-        {staticCta && (
-          <div className="absolute inset-x-0 bottom-16 z-20 flex justify-center gap-4">
-            <Button asChild size="lg">
-              <a href="#arena">Refleksini Test Et</a>
-            </Button>
-            <Button asChild size="lg" variant="outline">
-              <a href="#basvuru">Hemen Başvur</a>
-            </Button>
-          </div>
-        )}
+        <Reveal delay={200} className="pointer-events-auto mt-10 flex flex-col items-center gap-4 sm:flex-row">
+          <Button asChild size="lg">
+            <a href="#basvuru">
+              <RollingText text="Hemen Başvur" />
+            </a>
+          </Button>
+          <Button asChild size="lg" variant="outline">
+            <a href="#arena">
+              <RollingText text="Refleksini Test Et" />
+            </a>
+          </Button>
+        </Reveal>
+
+        <div className="pointer-events-auto mt-20 grid w-full max-w-4xl grid-cols-1 gap-4 sm:grid-cols-3">
+          {PILLARS.map((pillar, i) => (
+            <Reveal key={pillar.title} delay={300 + i * 120}>
+              <div className="rounded-lg border border-border bg-card/60 p-6 text-left backdrop-blur-sm transition-colors duration-200 hover:border-primary/50">
+                <pillar.icon className="h-7 w-7 text-primary" aria-hidden="true" />
+                <h3 className="mt-4 font-display text-sm uppercase tracking-wider text-foreground">
+                  {pillar.title}
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground">{pillar.text}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
       </div>
     </section>
   )
