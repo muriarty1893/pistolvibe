@@ -3,13 +3,10 @@ import { Crosshair } from 'lucide-react'
 import { Marquee } from '@/components/bits/Marquee'
 import { SectionHeading } from '@/components/SectionHeading'
 import { Reveal } from '@/components/Reveal'
-
-const PISTOLS = [
-  { name: 'NOVRITSCH SSP5 6" GBB', href: 'https://eu.novritsch.com/product/ssp5-gas-blowback-pistol/' },
-  { name: 'Glock 17 Gen 4', href: 'https://weairsoft.com/we-g001b-bk.html' },
-]
+import { useSiteContent } from '@/lib/use-site-content'
 
 export function Arsenal() {
+  const { arsenal } = useSiteContent()
   return (
     <section id="cephanelik" className="relative overflow-hidden py-24">
       <div className="container mx-auto px-6">
@@ -27,16 +24,22 @@ export function Arsenal() {
 
         <div className="border-y border-primary/20 bg-card/40 py-8 backdrop-blur-sm">
           <Marquee pauseOnHover className="py-2 [--duration:28s] [--gap:4rem]" aria-label="Takım tabancaları">
-            {PISTOLS.map((pistol) => (
-              <span key={pistol.name} className="flex items-center gap-[var(--gap)]">
-                <a
-                  href={pistol.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="whitespace-nowrap font-display text-4xl uppercase tracking-wide text-foreground transition-colors duration-200 hover:text-primary sm:text-6xl"
-                >
-                  {pistol.name}
-                </a>
+            {arsenal.map((pistol) => (
+              <span key={pistol.id} className="flex items-center gap-[var(--gap)]">
+                {pistol.href ? (
+                  <a
+                    href={pistol.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="whitespace-nowrap font-display text-4xl uppercase tracking-wide text-foreground transition-colors duration-200 hover:text-primary sm:text-6xl"
+                  >
+                    {pistol.name}
+                  </a>
+                ) : (
+                  <span className="whitespace-nowrap font-display text-4xl uppercase tracking-wide text-foreground sm:text-6xl">
+                    {pistol.name}
+                  </span>
+                )}
                 <Crosshair
                   className="h-8 w-8 shrink-0 text-primary gold-glow-sm"
                   aria-hidden="true"
@@ -50,8 +53,8 @@ export function Arsenal() {
             className="mt-2 py-2 opacity-70 [--duration:36s] [--gap:4rem]"
             aria-hidden="true"
           >
-            {PISTOLS.map((pistol) => (
-              <span key={pistol.name} className="flex items-center gap-[var(--gap)]">
+            {arsenal.map((pistol) => (
+              <span key={pistol.id} className="flex items-center gap-[var(--gap)]">
                 <span
                   className="whitespace-nowrap font-display text-3xl uppercase tracking-widest text-transparent sm:text-5xl"
                   style={{ WebkitTextStroke: '1px rgba(212,175,55,0.55)' }}

@@ -9,11 +9,32 @@ const ROOT = path.join(__dirname, '..')
 const app = express()
 const PORT = process.env.PORT || 3001
 const DATA_DIR = path.join(__dirname, 'data')
+const UPLOADS_DIR = path.join(DATA_DIR, 'uploads')
 const COMMENTS_FILE = path.join(DATA_DIR, 'comments.json')
 const APPLICATIONS_FILE = path.join(DATA_DIR, 'applications.json')
 const SCORES_FILE = path.join(DATA_DIR, 'scores.json')
+const CONTENT_FILE = path.join(DATA_DIR, 'content.json')
 
-app.use(express.json({ limit: '20kb' }))
+app.use(express.json({ limit: '6mb' }))
+
+// ── Varsayılan site içeriği (Vercel'deki api/_content.ts ile aynı) ──
+const DEFAULT_CONTENT = {
+  stats: [
+    { id: 'stat-members', value: 25, suffix: '+', label: 'Aktif Üye' },
+    { id: 'stat-matches', value: 40, suffix: '+', label: 'Oynanan Maç' },
+    { id: 'stat-bullets', value: 12500, suffix: '+', label: 'Atılan Airsoft Mermisi' },
+    { id: 'stat-founded', value: 2026, suffix: '', label: 'Kuruluş Yılı' },
+  ],
+  arsenal: [
+    {
+      id: 'arsenal-ssp5',
+      name: 'NOVRITSCH SSP5 6" GBB',
+      href: 'https://eu.novritsch.com/product/ssp5-gas-blowback-pistol/',
+    },
+    { id: 'arsenal-glock17', name: 'Glock 17 Gen 4', href: 'https://weairsoft.com/we-g001b-bk.html' },
+  ],
+  gallery: [],
+}
 
 async function readJson(file, fallback) {
   try {
@@ -146,10 +167,9 @@ app.post('/api/scores', rateLimit, async (req, res) => {
   res.status(201).json(entry)
 })
 
-// Not: Galeri görselleri artık build sırasında toplanıyor (src/assets/gallery),
-// bu yüzden /api/gallery ucu kaldırıldı.
+// Not: Galeri artık admin panelinden yönetilir (content.json + uploads/).
 
-// ── Admin (yerel geliştirme; Vercel'de api/admin-*.ts çalışır) ──
+// ── Admin (yerel geliştirme; Vercel'de api/admin*.ts çalışır) ──
 function adminAuth(req, res) {
   const password = process.env.ADMIN_PASSWORD
   if (!password) {
@@ -163,28 +183,196 @@ function adminAuth(req, res) {
   return true
 }
 
+function clampScoreFields(body = {}) {
+  return {
+    score: Math.max(0, Math.floor(Number(body.score)) || 0),
+    accuracy: Math.min(100, Math.max(0, Math.floor(Number(body.accuracy) || 0))),
+    bestStreak: Math.min(999, Math.max(0, Math.floor(Number(body.bestStreak) || 0))),
+  }
+}
+
+async function removeItem(file, id) {
+  const items = await readJson(file, [])
+  const filtered = items.filter((it) => it.id !== id)
+  if (filtered.length === items.length) return false
+  await writeJson(file, filtered)
+  return true
+}
+
+async function updateItem(file, id, transform) {
+  const items = await readJson(file, [])
+  const idx = items.findIndex((it) => it.id === id)
+  if (idx === -1) return false
+  items[idx] = transform(items[idx])
+  await writeJson(file, items)
+  return true
+}
+
+app.get('/api/content', async (_req, res) => {
+  res.json(await readJson(CONTENT_FILE, DEFAULT_CONTENT))
+})
+
+// Yüklenen fotoğrafları sun
+app.use('/uploads', express.static(UPLOADS_DIR))
+
 app.get('/api/admin', async (req, res) => {
   if (!adminAuth(req, res)) return
-  const comments = await readJson(COMMENTS_FILE, [])
-  const applications = await readJson(APPLICATIONS_FILE, [])
-  res.json({ comments, applications })
+  const [comments, applications, scores, content] = await Promise.all([
+    readJson(COMMENTS_FILE, []),
+    readJson(APPLICATIONS_FILE, []),
+    readJson(SCORES_FILE, []),
+    readJson(CONTENT_FILE, DEFAULT_CONTENT),
+  ])
+  scores.sort((a, b) => b.score - a.score)
+  res.json({ comments, applications, scores, content })
 })
 
 app.post('/api/admin', async (req, res) => {
   if (!adminAuth(req, res)) return
-  const type = req.body?.type
-  const id = String(req.body?.id || '')
-  if ((type !== 'comment' && type !== 'application') || !id) {
-    return res.status(400).json({ error: 'Geçersiz istek.' })
+  const action = String(req.body?.action || '')
+
+  try {
+    switch (action) {
+      case 'comment-update': {
+        const { id, name, pistol, message } = req.body ?? {}
+        if (!id || !name?.trim() || !pistol?.trim() || !message?.trim()) {
+          return res.status(400).json({ error: 'Tüm alanları doldurun.' })
+        }
+        const ok = await updateItem(COMMENTS_FILE, id, (oldC) => ({
+          ...oldC,
+          name: clean(name, 40),
+          pistol: clean(pistol, 60),
+          message: clean(message, 500),
+        }))
+        return ok ? res.json({ ok: true }) : res.status(404).json({ error: 'Yorum bulunamadı.' })
+      }
+
+      case 'comment-delete': {
+        const ok = await removeItem(COMMENTS_FILE, String(req.body?.id || ''))
+        return ok ? res.json({ ok: true }) : res.status(404).json({ error: 'Kayıt bulunamadı.' })
+      }
+
+      case 'application-delete': {
+        const ok = await removeItem(APPLICATIONS_FILE, String(req.body?.id || ''))
+        return ok ? res.json({ ok: true }) : res.status(404).json({ error: 'Kayıt bulunamadı.' })
+      }
+
+      case 'score-add': {
+        const callsign = clean(req.body?.callsign, 20)
+        if (!callsign || callsign.length < 2) {
+          return res.status(400).json({ error: 'Çağrı adı en az 2 karakter olmalı.' })
+        }
+        const fields = clampScoreFields(req.body)
+        if (fields.score > 10000) return res.status(400).json({ error: 'Geçersiz skor.' })
+        const entry = {
+          id: Date.now().toString(36),
+          callsign,
+          ...fields,
+          createdAt: new Date().toISOString(),
+        }
+        const scores = await readJson(SCORES_FILE, [])
+        scores.push(entry)
+        await writeJson(SCORES_FILE, scores)
+        return res.status(201).json(entry)
+      }
+
+      case 'score-update': {
+        const callsign = clean(req.body?.callsign, 20)
+        if (!req.body?.id || !callsign || callsign.length < 2) {
+          return res.status(400).json({ error: 'Çağrı adı en az 2 karakter olmalı.' })
+        }
+        const fields = clampScoreFields(req.body)
+        if (fields.score > 10000) return res.status(400).json({ error: 'Geçersiz skor.' })
+        const ok = await updateItem(SCORES_FILE, String(req.body.id), (oldS) => ({
+          ...oldS,
+          callsign,
+          ...fields,
+        }))
+        return ok ? res.json({ ok: true }) : res.status(404).json({ error: 'Skor bulunamadı.' })
+      }
+
+      case 'score-delete': {
+        const ok = await removeItem(SCORES_FILE, String(req.body?.id || ''))
+        return ok ? res.json({ ok: true }) : res.status(404).json({ error: 'Skor bulunamadı.' })
+      }
+
+      default:
+        return res.status(400).json({ error: 'Geçersiz istek.' })
+    }
+  } catch (err) {
+    console.error('admin hatası:', err)
+    res.status(500).json({ error: 'Sunucu hatası.' })
   }
-  const file = type === 'comment' ? COMMENTS_FILE : APPLICATIONS_FILE
-  const items = await readJson(file, [])
-  const filtered = items.filter((it) => it.id !== id)
-  if (filtered.length === items.length) {
-    return res.status(404).json({ error: 'Kayıt bulunamadı.' })
+})
+
+// Yerel "Blob" yerine disk; base64 JSON gövdesi beklenir.
+const MAX_UPLOAD_BYTES_LOCAL = 3.5 * 1024 * 1024
+const ALLOWED_TYPES_LOCAL = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/avif'])
+const EXT_BY_TYPE = {
+  'image/png': '.png',
+  'image/jpeg': '.jpg',
+  'image/webp': '.webp',
+  'image/gif': '.gif',
+  'image/avif': '.avif',
+}
+
+app.put('/api/admin-content', async (req, res) => {
+  if (!adminAuth(req, res)) return
+  const body = typeof req.body === 'object' && req.body !== null ? req.body : {}
+  const current = await readJson(CONTENT_FILE, DEFAULT_CONTENT)
+  const next = {
+    stats: Array.isArray(body.stats) && body.stats.length > 0 ? body.stats : current.stats,
+    arsenal:
+      Array.isArray(body.arsenal) && body.arsenal.length > 0 ? body.arsenal : current.arsenal,
+    gallery: Array.isArray(body.gallery) ? body.gallery : current.gallery,
+    updatedAt: new Date().toISOString(),
   }
-  await writeJson(file, filtered)
-  res.json({ ok: true, removed: items.length - filtered.length })
+  await writeJson(CONTENT_FILE, next)
+  res.json({ ok: true })
+})
+
+app.post('/api/admin-content', async (req, res) => {
+  if (!adminAuth(req, res)) return
+  const action = String(req.body?.action || '')
+
+  if (action === 'upload') {
+    const contentType = String(req.body?.contentType || '')
+    const ext = EXT_BY_TYPE[contentType]
+    if (!ext || !ALLOWED_TYPES_LOCAL.has(contentType)) {
+      return res.status(400).json({ error: 'Sadece PNG/JPG/WEBP/GIF/AVIF yükleyebilirsin.' })
+    }
+    const buffer = Buffer.from(String(req.body?.data || ''), 'base64')
+    if (buffer.length === 0) return res.status(400).json({ error: 'Dosya verisi boş.' })
+    if (buffer.length > MAX_UPLOAD_BYTES_LOCAL) {
+      return res.status(413).json({ error: 'Fotoğraf çok büyük (maks 3.5MB).' })
+    }
+    await fs.mkdir(UPLOADS_DIR, { recursive: true })
+    const filename = `${Date.now().toString(36)}${ext}`
+    await fs.writeFile(path.join(UPLOADS_DIR, filename), buffer)
+    return res.status(201).json({
+      ok: true,
+      item: {
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        url: `/uploads/${filename}`,
+        caption: '',
+      },
+    })
+  }
+
+  if (action === 'blob-delete') {
+    const url = String(req.body?.url || '')
+    // Sadece kendi uploads klasörümüzdeki dosyaları silebiliriz
+    const match = url.match(/^\/uploads\/([A-Za-z0-9._-]+)$/)
+    if (!match) return res.status(400).json({ error: 'Geçersiz dosya adresi.' })
+    try {
+      await fs.unlink(path.join(UPLOADS_DIR, match[1]))
+    } catch {
+      // zaten silinmiş olabilir — yut
+    }
+    return res.json({ ok: true })
+  }
+
+  res.status(400).json({ error: 'Geçersiz istek.' })
 })
 
 if (process.env.NODE_ENV === 'production') {

@@ -2,27 +2,26 @@ import { Camera } from 'lucide-react'
 
 import { SectionHeading } from '@/components/SectionHeading'
 import { Reveal } from '@/components/Reveal'
+import { useSiteContent } from '@/lib/use-site-content'
 
-// Galeri görselleri build sırasında src/assets/gallery klasöründen toplanır.
-// Fotoğraf eklemek için dosyayı bu klasöre atıp yeniden build almak yeterli.
-const galleryModules = import.meta.glob('../assets/gallery/*.{png,jpg,jpeg,webp,gif,avif}', {
-  eager: true,
-  query: '?url',
-  import: 'default',
-})
-const images = Object.values(galleryModules) as string[]
-
+// Fotoğraflar admin panelinden yönetilir (/api/content üzerinden gelir).
 export function Gallery() {
+  const { gallery } = useSiteContent()
+
   return (
     <section id="galeri" className="scroll-mt-24 border-y border-border bg-card/30 py-24">
       <div className="container mx-auto px-6">
         <SectionHeading
           badge="Galeri"
           title="Sahadan Kareler"
-          description="Saha fotoğraflarımız yakında burada olacak. Bizi takipte kal."
+          description={
+            gallery.length > 0
+              ? 'Sahadan son kareler.'
+              : 'Saha fotoğraflarımız yakında burada olacak. Bizi takipte kal.'
+          }
         />
 
-        {images.length === 0 ? (
+        {gallery.length === 0 ? (
           <Reveal>
             <div className="mx-auto grid max-w-4xl grid-cols-2 gap-4 sm:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => (
@@ -40,14 +39,22 @@ export function Gallery() {
           </Reveal>
         ) : (
           <div className="mx-auto grid max-w-5xl grid-cols-2 gap-4 sm:grid-cols-3">
-            {images.map((src) => (
-              <Reveal key={src}>
-                <img
-                  src={src}
-                  alt="Adana Tactical Airsoft saha fotoğrafı"
-                  loading="lazy"
-                  className="aspect-[4/3] w-full rounded-lg border border-border object-cover transition-[filter] duration-300 hover:brightness-110"
-                />
+            {gallery.map((photo) => (
+              <Reveal key={photo.id}>
+                <a
+                  href={photo.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group block overflow-hidden rounded-lg border border-border"
+                  title={photo.caption || undefined}
+                >
+                  <img
+                    src={photo.url}
+                    alt={photo.caption || 'Adana Tactical Airsoft saha fotoğrafı'}
+                    loading="lazy"
+                    className="aspect-[4/3] w-full object-cover transition-[filter,transform] duration-300 group-hover:brightness-110 group-hover:scale-[1.03]"
+                  />
+                </a>
               </Reveal>
             ))}
           </div>

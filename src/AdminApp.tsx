@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { FileText, Lock, LogOut, MessageSquare, RefreshCw, Trash2 } from 'lucide-react'
+import {
+  Camera,
+  Crosshair,
+  FileText,
+  Lock,
+  LogOut,
+  MessageSquare,
+  RefreshCw,
+  Trophy,
+} from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -8,28 +17,26 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 
-interface Application {
-  id: string
-  name: string
-  callsign: string
-  age: number | null
-  email: string
-  phone: string
-  pistol: string
-  experience: string
-  message: string
-  createdAt: string
-}
-
-interface Comment {
-  id: string
-  name: string
-  pistol: string
-  message: string
-  createdAt: string
-}
+import {
+  fetchAdminData,
+  type AdminData,
+} from '@/admin/shared'
+import { ApplicationsTab } from '@/admin/ApplicationsTab'
+import { CommentsTab } from '@/admin/CommentsTab'
+import { ScoresTab } from '@/admin/ScoresTab'
+import { GalleryTab } from '@/admin/GalleryTab'
+import { StatsTab } from '@/admin/StatsTab'
+import { ArsenalTab } from '@/admin/ArsenalTab'
 
 const STORAGE_KEY = 'pistolvibe-admin-key'
+
+export type AdminTab =
+  | 'applications'
+  | 'comments'
+  | 'scores'
+  | 'gallery'
+  | 'stats'
+  | 'arsenal'
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('tr-TR', {
@@ -42,20 +49,20 @@ function formatDate(iso: string) {
 }
 
 export default function AdminApp() {
-  const [adminKey, setAdminKey] = useState('')
   const [authed, setAuthed] = useState(false)
   const [passwordInput, setPasswordInput] = useState('')
-  const [data, setData] = useState<{ comments: Comment[]; applications: Application[] } | null>(null)
+  const [data, setData] = useState<AdminData | null>(null)
   const [loading, setLoading] = useState(false)
-  const [tab, setTab] = useState<'applications' | 'comments'>('applications')
+  const [tab, setTab] = useState<AdminTab>('applications')
+
+  // Son admin şifresi — sekmeye prop olarak geçilir
+  const [adminKey, setAdminKey] = useState('')
 
   const load = useCallback(async (key: string): Promise<boolean> => {
     setLoading(true)
     try {
-      const res = await fetch('/api/admin', { headers: { 'x-admin-key': key } })
-      const body = await res.json().catch(() => null)
-      if (!res.ok) throw new Error(body?.error || 'Bir hata oluştu.')
-      setData(body)
+      const data = await fetchAdminData(key)
+      setData(data)
       return true
     } catch (err) {
       toast.error('Yüklenemedi', {
@@ -80,8 +87,7 @@ export default function AdminApp() {
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
-    const ok = await load(passwordInput)
-    if (ok) {
+    if (await load(passwordInput)) {
       sessionStorage.setItem(STORAGE_KEY, passwordInput)
       setAdminKey(passwordInput)
       setAuthed(true)
@@ -96,24 +102,8 @@ export default function AdminApp() {
     setData(null)
   }
 
-  async function handleDelete(type: 'comment' | 'application', id: string) {
-    if (!window.confirm('Bu kaydı silmek istediğine emin misin?')) return
-    try {
-      const res = await fetch('/api/admin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey },
-        body: JSON.stringify({ type, id }),
-      })
-      const body = await res.json().catch(() => null)
-      if (!res.ok) throw new Error(body?.error || 'Bir hata oluştu.')
-      toast.success('Kayıt silindi')
-      await load(adminKey)
-    } catch (err) {
-      toast.error('Silinemedi', {
-        description: err instanceof Error ? err.message : 'Bir hata oluştu.',
-      })
-    }
-  }
+  /** Veri değiştiğinde (kayıt/silme sonrası) listeyi tazeler. */
+  const refresh = useCallback(() => load(adminKey), [load, adminKey])
 
   if (!authed) {
     return (
@@ -150,6 +140,15 @@ export default function AdminApp() {
   const applications = data?.applications ?? []
   const comments = data?.comments ?? []
 
+  const TABS: Array<{ id: AdminTab; label: string; icon: typeof FileText; count?: number }> = [
+    { id: 'applications', label: 'Başvurular', icon: FileText, count: applications.length },
+    { id: 'comments', label: 'Yorumlar', icon: MessageSquare, count: comments.length },
+    { id: 'scores', label: 'Skorlar', icon: Trophy },
+    { id: 'gallery', label: 'Galeri', icon: Camera },
+    { id: 'stats', label: 'İstatistikler', icon: RefreshCw },
+    { id: 'arsenal', label: 'Cephanelik', icon: Crosshair },
+  ]
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card/50">
@@ -161,7 +160,7 @@ export default function AdminApp() {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => load(adminKey)} disabled={loading}>
+            <Button variant="outline" size="sm" onClick={() => refresh()} disabled={loading}>
               <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} aria-hidden="true" />
               Yenile
             </Button>
@@ -175,126 +174,55 @@ export default function AdminApp() {
 
       <main className="container mx-auto px-6 py-8">
         <div className="mb-6 flex flex-wrap gap-2">
-          <Button
-            variant={tab === 'applications' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setTab('applications')}
-          >
-            <FileText className="h-4 w-4" aria-hidden="true" />
-            Başvurular ({applications.length})
-          </Button>
-          <Button
-            variant={tab === 'comments' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setTab('comments')}
-          >
-            <MessageSquare className="h-4 w-4" aria-hidden="true" />
-            Yorumlar ({comments.length})
-          </Button>
+          {TABS.map(({ id, label, icon: Icon, count }) => (
+            <Button
+              key={id}
+              variant={tab === id ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTab(id)}
+            >
+              <Icon className="h-4 w-4" aria-hidden="true" />
+              {label}
+              {typeof count === 'number' && (
+                <Badge variant="outline" className="ml-1 px-1.5 py-0 text-xs">
+                  {count}
+                </Badge>
+              )}
+            </Button>
+          ))}
         </div>
 
-        {loading && !data ? (
+        {!data ? (
           <p className="py-16 text-center text-muted-foreground">Yükleniyor...</p>
-        ) : tab === 'applications' ? (
-          applications.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-border py-16 text-center text-muted-foreground">
-              Henüz başvuru yok.
-            </p>
-          ) : (
-            <div className="overflow-x-auto rounded-lg border border-border">
-              <table className="w-full min-w-[900px] text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-card/60 text-left uppercase tracking-wider text-muted-foreground">
-                    <th className="px-4 py-3 font-medium">Ad</th>
-                    <th className="px-4 py-3 font-medium">Çağrı Adı</th>
-                    <th className="px-4 py-3 font-medium">Yaş</th>
-                    <th className="px-4 py-3 font-medium">İletişim</th>
-                    <th className="px-4 py-3 font-medium">Tabanca</th>
-                    <th className="px-4 py-3 font-medium">Deneyim</th>
-                    <th className="px-4 py-3 font-medium">Mesaj</th>
-                    <th className="px-4 py-3 font-medium">Tarih</th>
-                    <th className="px-4 py-3 font-medium"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {applications.map((app) => (
-                    <tr key={app.id} className="border-b border-border/50 transition-colors duration-150 hover:bg-card/40">
-                      <td className="px-4 py-3 font-medium">{app.name}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{app.callsign}</td>
-                      <td className="px-4 py-3">{app.age ?? '-'}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-col">
-                          <a href={`mailto:${app.email}`} className="text-primary hover:underline">
-                            {app.email}
-                          </a>
-                          {app.phone && <span className="text-muted-foreground">{app.phone}</span>}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">{app.pistol || '-'}</td>
-                      <td className="px-4 py-3">
-                        <Badge variant="outline">{app.experience}</Badge>
-                      </td>
-                      <td className="max-w-[220px] px-4 py-3">
-                        <span className="block truncate text-muted-foreground" title={app.message}>
-                          {app.message || '-'}
-                        </span>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">
-                        {formatDate(app.createdAt)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => handleDelete('application', app.id)}
-                          aria-label={`${app.name} başvurusunu sil`}
-                        >
-                          <Trash2 className="h-4 w-4" aria-hidden="true" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )
-        ) : comments.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-border py-16 text-center text-muted-foreground">
-            Henüz yorum yok.
-          </p>
         ) : (
-          <div className="flex flex-col gap-3">
-            {comments.map((comment) => (
-              <Card key={comment.id} className="border-border bg-card/80">
-                <CardContent className="flex items-start justify-between gap-4 p-5">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-display text-sm uppercase tracking-wider">{comment.name}</p>
-                      <Badge variant="outline">{comment.pistol}</Badge>
-                      <span className="text-xs text-muted-foreground/60">
-                        {formatDate(comment.createdAt)}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                      {comment.message}
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    onClick={() => handleDelete('comment', comment.id)}
-                    aria-label={`${comment.name} yorumunu sil`}
-                  >
-                    <Trash2 className="h-4 w-4" aria-hidden="true" />
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <>
+            {tab === 'applications' && (
+              <ApplicationsTab data={data} adminKey={adminKey} onChanged={refresh} formatDate={formatDate} />
+            )}
+            {tab === 'comments' && (
+              <CommentsTab data={data} adminKey={adminKey} onChanged={refresh} formatDate={formatDate} />
+            )}
+            {tab === 'scores' && (
+              <ScoresTab data={data} adminKey={adminKey} onChanged={refresh} />
+            )}
+            {tab === 'gallery' && (
+              <GalleryTab data={data} adminKey={adminKey} onChanged={refresh} />
+            )}
+            {tab === 'stats' && <StatsTab data={data} adminKey={adminKey} />}
+            {tab === 'arsenal' && <ArsenalTab data={data} adminKey={adminKey} />}
+          </>
         )}
       </main>
     </div>
+  )
+}
+
+// Küçük tekrar kullanılabilir parçalar
+
+export function TabEmptyState({ message }: { message: string }) {
+  return (
+    <p className="rounded-lg border border-dashed border-border py-16 text-center text-muted-foreground">
+      {message}
+    </p>
   )
 }

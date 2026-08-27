@@ -154,6 +154,8 @@ export interface RedisClient {
   lRem(key: string, count: number, value: string): Promise<number>
   incr(key: string): Promise<number>
   expire(key: string, seconds: number): Promise<number>
+  get(key: string): Promise<string | null>
+  set(key: string, value: string): Promise<string | null>
   del(...keys: string[]): Promise<number>
 }
 
@@ -205,6 +207,12 @@ export async function createRedisClient(url: string): Promise<RedisClient & { cl
     async expire(key, seconds) {
       const res = await conn.command('EXPIRE', key, String(seconds))
       return res as number
+    },
+    async get(key) {
+      return (await conn.command('GET', key)) as string | null
+    },
+    async set(key, value) {
+      return (await conn.command('SET', key, value)) as string | null
     },
     async del(...keys) {
       const res = await conn.command('DEL', ...keys)
