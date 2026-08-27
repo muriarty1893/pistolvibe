@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useProgress } from '@react-three/drei'
-import { Crosshair, RotateCcw, Timer, Trophy, Zap } from 'lucide-react'
+import { AlertTriangle, Crosshair, RotateCcw, Trophy, Zap } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -34,9 +34,12 @@ function GameLoader() {
   )
 }
 
-const GAME_DURATION = 30
+const MAX_ESCAPES = 10
 const MAG_SIZE = 12
 const RELOAD_MS = 1100
+
+/** Instagram kullanıcı adı: harf, rakam, nokta, alt çizgi — 2-30 karakter */
+const IG_HANDLE_RE = /^[a-zA-Z0-9._]{2,30}$/
 
 type Phase = 'idle' | 'playing' | 'over'
 
@@ -45,11 +48,7 @@ interface Result {
   hits: number
   shots: number
   bestStreak: number
-}
-
-function formatTime(ms: number) {
-  const s = Math.ceil(ms / 1000)
-  return `0:${String(Math.max(s, 0)).padStart(2, '0')}`
+  escapes: number
 }
 
 export function RangeGame() {
@@ -61,24 +60,31 @@ export function RangeGame() {
   const [shots, setShots] = useState(0)
   const [ammo, setAmmo] = useState(MAG_SIZE)
   const [reloading, setReloading] = useState(false)
-  const [timeLeft, setTimeLeft] = useState(GAME_DURATION * 1000)
+  const [escapes, setEscapes] = useState(0)
   const [result, setResult] = useState<Result | null>(null)
-  const [callsign, setCallsign] = useState('')
+  const [handle, setHandle] = useState('')
+  const [handleTouched, setHandleTouched] = useState(false)
   const [submitState, setSubmitState] = useState<'idle' | 'sending' | 'done' | 'error'>('idle')
 
   const shotSignal = useRef(0)
-  const startedAt = useRef(0)
   const reloadUntil = useRef(0)
   const reloadSignal = useRef(0)
   const containerRef = useRef<HTMLDivElement>(null)
   const statsRef = useRef({ hits: 0, shots: 0, bestStreak: 0 })
   const scoreRef = useRef(0)
+  const escapesRef = useRef(0)
 
   useEffect(() => {
-    setCallsign(localStorage.getItem('pv_callsign') ?? '')
+    setHandle(localStorage.getItem('pv_callsign') ?? '')
   }, [])
 
   const start = useCallback(() => {
+    const name = handle.trim()
+    if (!IG_HANDLE_RE.test(name)) {
+      setHandleTouched(true)
+      return
+    }
+    localStorage.setItem('pv_callsign', name)
     setPhase('playing')
     setScore(0)
     setStreak(0)
@@ -87,35 +93,30 @@ export function RangeGame() {
     setShots(0)
     setAmmo(MAG_SIZE)
     setReloading(false)
+    setEscapes(0)
     setResult(null)
     setSubmitState('idle')
-    setTimeLeft(GAME_DURATION * 1000)
-    startedAt.current = performance.now()
     reloadUntil.current = 0
     statsRef.current = { hits: 0, shots: 0, bestStreak: 0 }
     scoreRef.current = 0
-  }, [])
+    escapesRef.current = 0
+  }, [handle])
 
   const finish = useCallback(() => {
     const { hits: h, shots: s, bestStreak: b } = statsRef.current
-    setResult({ score: scoreRef.current, hits: h, shots: s, bestStreak: b })
+    setResult({ score: scoreRef.current, hits: h, shots: s, bestStreak: b, escapes: escapesRef.current })
     setPhase('over')
     playEnd()
   }, [])
 
-  useEffect(() => {
-    if (phase !== 'playing') return
-    const id = window.setInterval(() => {
-      const left = GAME_DURATION * 1000 - (performance.now() - startedAt.current)
-      if (left <= 0) {
-        setTimeLeft(0)
-        finish()
-      } else {
-        setTimeLeft(left)
-      }
-    }, 100)
-    return () => window.clearInterval(id)
-  }, [phase, finish])
+  const handleEscape = useCallback(
+    (n: number) => {
+      escapesRef.current += n
+      setEscapes(escapesRef.current)
+      if (escapesRef.current >= MAX_ESCAPES) finish()
+    },
+    [finish]
+  )
 
   // arena bileşeni görünür görülmez 3D chunk + GLB'leri ön yükle
   useEffect(() => {
@@ -243,8 +244,8 @@ export function RangeGame() {
 
   const submitScore = useCallback(async () => {
     if (!result || submitState !== 'idle') return
-    const name = callsign.trim()
-    if (name.length < 2) {
+    const name = handle.trim()
+    if (!IG_HANDLE_RE.test(name)) {
       setSubmitState('error')
       return
     }
@@ -266,7 +267,12 @@ export function RangeGame() {
     } catch {
       setSubmitState('error')
     }
-  }, [result, submitState, callsign])
+  }, [result, submitState, handle])
+
+  // oyun bitince skor otomatik gönderilir (kullanıcı adı başta alındı)
+  useEffect(() => {
+    if (phase === 'over' && result && submitState === 'idle') void submitScore()
+  }, [phase, result, submitState, submitScore])
 
   const accuracy = shots ? Math.round((hits / shots) * 100) : 0
 
@@ -276,7 +282,7 @@ export function RangeGame() {
         <SectionHeading
           badge="Refleks Arenası"
           title="Nişancılığını Kanıtla"
-          description="30 saniye, 12’lik şarjör, çelik hedefler. Kaçırmak serbest — unutmak yasak. Skorun tabloda kalsın."
+          description="Hedefler hızlanan dizilerle gelir; 10 kaçırma seriyi bitirir. Skorun sınırsız — Instagram adınla tabloya yazılır."
         />
 
         <div
@@ -300,7 +306,6 @@ export function RangeGame() {
               <Suspense fallback={null}>
                 <RangeScene
                   active={phase === 'playing'}
-                  elapsed={(performance.now() - startedAt.current) / 1000}
                   shotSignal={shotSignal}
                   reloadSignal={reloadSignal}
                   aimRef={aimRef}
@@ -308,6 +313,7 @@ export function RangeGame() {
                   joystickActive={joystickActive}
                   onHit={handleHit}
                   onMiss={handleMiss}
+                  onEscape={handleEscape}
                 />
               </Suspense>
 
@@ -320,11 +326,12 @@ export function RangeGame() {
                 <div
                   className={cn(
                     'flex items-center gap-2 rounded border bg-background/80 px-3 py-1.5 text-lg backdrop-blur-sm',
-                    timeLeft < 6000 ? 'border-destructive/60 text-destructive' : 'border-border text-foreground'
+                    escapes >= MAX_ESCAPES - 3 ? 'border-destructive/60 text-destructive' : 'border-border text-foreground'
                   )}
                 >
-                  <Timer className="h-4 w-4" aria-hidden="true" />
-                  {formatTime(timeLeft)}
+                  <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+                  {escapes}
+                  <span className="text-xs text-muted-foreground">/{MAX_ESCAPES}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   {reloading ? (
@@ -349,6 +356,18 @@ export function RangeGame() {
                 <span className="hidden sm:inline">R = şarjör</span>
                 <span className="sm:hidden">sürükle: nişan</span>
               </div>
+
+              {/* sonsuz mod: istediğin an bitir */}
+              <button
+                type="button"
+                onPointerDown={(e) => {
+                  e.stopPropagation()
+                  finish()
+                }}
+                className="absolute bottom-4 right-4 cursor-pointer rounded border border-border bg-background/80 px-3 py-1.5 text-sm text-muted-foreground backdrop-blur-sm transition-colors hover:border-destructive/60 hover:text-destructive"
+              >
+                Bitir
+              </button>
 
               {/* dokunmatik kontroller: sol joystick nişan, sağ başparmak ateş */}
               {isTouch && (
@@ -394,16 +413,37 @@ export function RangeGame() {
               <Crosshair className="h-14 w-14 text-primary gold-glow-sm" aria-hidden="true" />
               <div>
                 <h3 className="font-display text-2xl uppercase tracking-wide text-foreground">
-                  Çelik Hedefler Seni Bekliyor
+                  Sonsuz Seri Seni Bekliyor
                 </h3>
                 <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
-                  Hedefler rastgele yükselir, sen tıkla. Her isabet seriyi büyütür, seri puanı katlar.
+                  Hedefler hızlanarak yağar, sen tıkla. 10 hedef kaçırırsan seri biter.
                   Şarjör 12 mermi — R ile doldur.
                 </p>
               </div>
-              <Button size="lg" onClick={start}>
-                Ateş Başla
-              </Button>
+
+              <div className="flex w-full max-w-sm flex-col gap-3">
+                <Input
+                  value={handle}
+                  onChange={(e) => {
+                    setHandle(e.target.value)
+                    setHandleTouched(true)
+                  }}
+                  placeholder="Instagram kullanıcı adın"
+                  maxLength={30}
+                  aria-label="Instagram kullanıcı adı"
+                  className={cn(
+                    handleTouched && !IG_HANDLE_RE.test(handle.trim()) && 'border-destructive/70 focus-visible:ring-destructive/40'
+                  )}
+                />
+                {handleTouched && !IG_HANDLE_RE.test(handle.trim()) && (
+                  <p className="text-xs text-destructive">
+                    2-30 karakter; sadece harf, rakam, nokta ve alt çizgi.
+                  </p>
+                )}
+                <Button size="lg" onClick={start} disabled={!IG_HANDLE_RE.test(handle.trim())}>
+                  Ateş Başla
+                </Button>
+              </div>
             </div>
           )}
 
@@ -411,41 +451,35 @@ export function RangeGame() {
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 bg-background/95 p-6 text-center">
               <Trophy className="h-12 w-12 text-primary gold-glow-sm" aria-hidden="true" />
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Süre Bitti</p>
+                <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                  Seri Bitti{handle.trim() ? ` — @${handle.trim()}` : ''}
+                </p>
                 <p className="mt-2 font-display text-5xl text-gold-gradient sm:text-6xl">
                   {result.score.toLocaleString('tr-TR')}
                 </p>
                 <p className="mt-3 text-sm text-muted-foreground">
                   {result.hits}/{result.shots} isabet • {result.shots ? Math.round((result.hits / result.shots) * 100) : 0}%
-                  isabet oranı • en uzun seri {result.bestStreak}
+                  isabet oranı • en uzun seri {result.bestStreak} • kaçan {result.escapes}
                 </p>
               </div>
 
-              {submitState === 'done' ? (
+              {submitState === 'done' && (
                 <p className="font-display uppercase tracking-wider text-primary">
                   Skorun tabloya işlendi. Şerefle anılacaksın.
                 </p>
-              ) : (
-                <div className="flex w-full max-w-sm flex-col gap-3 sm:flex-row">
-                  <Input
-                    value={callsign}
-                    onChange={(e) => {
-                      setCallsign(e.target.value)
-                      setSubmitState('idle')
-                    }}
-                    placeholder="Çağrı adın"
-                    maxLength={20}
-                    aria-label="Çağrı adı"
-                  />
-                  <Button onClick={submitScore} disabled={submitState === 'sending'}>
-                    {submitState === 'sending' ? 'Gönderiliyor…' : 'Skoru Kaydet'}
-                  </Button>
-                </div>
               )}
               {submitState === 'error' && (
-                <p className="text-sm text-destructive">
-                  Çağrı adı en az 2 karakter olmalı ya da bir sorun oldu. Tekrar dene.
-                </p>
+                <>
+                  <p className="text-sm text-destructive">Skor gönderilemedi. Tekrar dene.</p>
+                  <Button
+                    onClick={() => {
+                      setSubmitState('idle')
+                      void submitScore()
+                    }}
+                  >
+                    Skoru Kaydet
+                  </Button>
+                </>
               )}
 
               <div className="flex gap-3">

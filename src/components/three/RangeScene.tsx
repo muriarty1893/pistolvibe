@@ -1,13 +1,12 @@
-import { Suspense, useCallback, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Sky, useTexture, useGLTF } from '@react-three/drei'
+import { useTexture, useGLTF } from '@react-three/drei'
 import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js'
 import * as THREE from 'three'
 import { getFlashTexture } from '@/lib/flashTexture'
 
 export interface RangeSceneProps {
   active: boolean
-  elapsed: number
   shotSignal: { current: number }
   reloadSignal: { current: number }
   aimRef: { current: { x: number; y: number } }
@@ -16,6 +15,8 @@ export interface RangeSceneProps {
   joystickActive: { current: boolean }
   onHit: () => void
   onMiss: () => void
+  /** Süresi dolup kaçan hedef sayısı (oyun sonu sayacı) */
+  onEscape: (n: number) => void
 }
 
 interface TargetData {
@@ -73,7 +74,7 @@ function MuzzleFlash({ innerRef }: { innerRef: React.RefObject<THREE.Group> }) {
   )
 }
 
-function SteelTarget({
+function PanelTarget({
   data,
   active,
 }: {
@@ -108,50 +109,55 @@ function SteelTarget({
         <boxGeometry args={[0.55, 0.07, 0.45]} />
         <meshStandardMaterial color="#2c2c34" metalness={0.6} roughness={0.6} />
       </mesh>
-      {/* insan silüeti karton hedef */}
-      <HumanTargetMesh active={active} />
+      {/* tahta panel hedef */}
+      <WoodPanel active={active} />
     </group>
   )
 }
 
-/** İnsan silüeti hedef (IPSC tarzı) — prosedürel karton hedef */
-function HumanTargetMesh({ active }: { active: boolean }) {
-  const { geom, cy } = useMemo(() => {
-    const s = new THREE.Shape()
-    s.moveTo(-0.11, 0.62)
-    s.quadraticCurveTo(-0.13, 0.78, 0, 0.8)
-    s.quadraticCurveTo(0.13, 0.78, 0.11, 0.62)
-    s.lineTo(0.09, 0.55)
-    s.quadraticCurveTo(0.26, 0.52, 0.3, 0.4)
-    s.lineTo(0.32, 0.12)
-    s.lineTo(0.22, 0.1)
-    s.lineTo(0.19, -0.42)
-    s.lineTo(-0.19, -0.42)
-    s.lineTo(-0.22, 0.1)
-    s.lineTo(-0.32, 0.12)
-    s.lineTo(-0.3, 0.4)
-    s.quadraticCurveTo(-0.26, 0.52, -0.09, 0.55)
-    s.closePath()
-    const g = new THREE.ExtrudeGeometry(s, { depth: 0.04, bevelEnabled: false })
-    g.center()
-    const box = new THREE.Box3().setFromBufferAttribute(g.getAttribute('position') as THREE.BufferAttribute)
-    const cy = (box.max.y + box.min.y) / 2
-    return { geom: g, cy }
-  }, [])
+const WOOD_TONES = ['#b98a4e', '#c49a62', '#ab7c44']
+
+/** Vurulabilir tahta panel: dikey liteler + arka çapraz destek + boyalı nişan halkası */
+function WoodPanel({ active }: { active: boolean }) {
+  const planks = useMemo(
+    () =>
+      [-0.21, 0, 0.21].map((x, i) => ({
+        x: x + (i - 1) * 0.004,
+        tone: WOOD_TONES[i % WOOD_TONES.length],
+        ry: (i - 1) * 0.012,
+      })),
+    []
+  )
 
   return (
     <group visible={active}>
-      <mesh geometry={geom}>
-        <meshStandardMaterial color="#c9a06a" roughness={0.85} />
+      {planks.map((p, i) => (
+        <mesh key={i} position={[p.x, 0, 0]} rotation={[0, p.ry, 0]}>
+          <boxGeometry args={[0.2, 1.0, 0.05]} />
+          <meshStandardMaterial color={p.tone} roughness={0.85} />
+        </mesh>
+      ))}
+      {/* arka çapraz destek */}
+      <mesh position={[0, -0.18, -0.045]} rotation={[0, 0, 0.03]}>
+        <boxGeometry args={[0.68, 0.14, 0.035]} />
+        <meshStandardMaterial color="#8f6a3a" roughness={0.9} />
       </mesh>
-      <mesh position={[0, cy - 0.02, 0.045]}>
-        <ringGeometry args={[0.09, 0.13, 24]} />
+      {/* boyalı nişan halkası */}
+      <mesh position={[0, 0.02, 0.032]}>
+        <ringGeometry args={[0.1, 0.145, 28]} />
         <meshStandardMaterial color="#f5f0e0" roughness={0.7} />
       </mesh>
-      <mesh position={[0, cy - 0.02, 0.05]}>
-        <circleGeometry args={[0.05, 20]} />
-        <meshStandardMaterial color="#8b2020" roughness={0.6} />
+      <mesh position={[0, 0.02, 0.033]}>
+        <circleGeometry args={[0.055, 22]} />
+        <meshStandardMaterial color="#a52525" roughness={0.6} />
       </mesh>
+      {/* çiviler */}
+      {[-0.3, 0.3].map((x) => (
+        <mesh key={x} position={[x, 0.36, 0.031]}>
+          <circleGeometry args={[0.014, 10]} />
+          <meshStandardMaterial color="#4a3826" roughness={0.6} />
+        </mesh>
+      ))}
     </group>
   )
 }
@@ -396,21 +402,23 @@ function ViewModel({
 
 function Spawner({
   active,
-  elapsed,
   setTargets,
 }: {
   active: boolean
-  elapsed: number
   setTargets: React.Dispatch<React.SetStateAction<TargetData[]>>
 }) {
   const spawnClock = useRef(0)
+  const runTime = useRef(0)
   useFrame((state, delta) => {
     if (!active) return
+    runTime.current += delta
+    const t = runTime.current
     spawnClock.current += delta
-    const interval = Math.max(0.45, 0.95 - elapsed * 0.016)
+    // Subway Surfers rampası: yumuşak başlangıç, zamanla hızlanan baskı
+    const interval = Math.max(0.34, 1.05 - t * 0.022)
     if (spawnClock.current >= interval) {
       spawnClock.current = 0
-      const ttl = Math.max(0.95, 1.5 - elapsed * 0.02)
+      const ttl = Math.max(0.85, 2.0 - t * 0.028)
       const target: TargetData = {
         id: nextId++,
         x: (Math.random() - 0.5) * 4,
@@ -419,13 +427,35 @@ function Spawner({
         born: state.clock.elapsedTime,
         ttl,
       }
-      setTargets((prev) => [...prev.slice(-7), target])
+      setTargets((prev) => [...prev.slice(-11), target])
     }
+  })
+  return null
+}
 
-    setTargets((prev) => {
-      const kept = prev.filter((t) => state.clock.elapsedTime - t.born < t.ttl)
-      return kept.length === prev.length ? prev : kept
-    })
+/** Süresi dolup kaçan hedefleri sayar — StrictMode güvenli: yan etkiler updater dışında */
+function TargetLifecycle({
+  active,
+  targetsRef,
+  setTargets,
+  onEscape,
+}: {
+  active: boolean
+  targetsRef: { current: TargetData[] }
+  setTargets: React.Dispatch<React.SetStateAction<TargetData[]>>
+  onEscape: (n: number) => void
+}) {
+  useFrame((state) => {
+    if (!active) return
+    const prev = targetsRef.current
+    if (prev.length === 0) return
+    const now = state.clock.elapsedTime
+    let escaped = 0
+    for (const t of prev) if (now - t.born >= t.ttl) escaped++
+    if (escaped > 0) {
+      setTargets((cur) => cur.filter((t) => now - t.born < t.ttl))
+      onEscape(escaped)
+    }
   })
   return null
 }
@@ -680,6 +710,45 @@ function RangeEnvironment() {
   )
 }
 
+/** Gradient gök kubbesi: zenitte mavi, ufukta sisle uyumlu açık ton — patlama yok */
+function SkyDome() {
+  const mat = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        side: THREE.BackSide,
+        depthWrite: false,
+        uniforms: {
+          zenith: { value: new THREE.Color('#3d7ab8') },
+          horizon: { value: new THREE.Color('#cfe2f2') },
+        },
+        vertexShader: /* glsl */ `
+          varying vec3 vDir;
+          void main() {
+            vDir = normalize(position);
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: /* glsl */ `
+          uniform vec3 zenith;
+          uniform vec3 horizon;
+          varying vec3 vDir;
+          void main() {
+            float h = max(vDir.y, 0.0);
+            // ufukta yumuşak, zenitte doygun mavi
+            vec3 col = mix(horizon, zenith, pow(h, 0.62));
+            gl_FragColor = vec4(col, 1.0);
+          }
+        `,
+      }),
+    []
+  )
+  return (
+    <mesh material={mat} renderOrder={-1}>
+      <sphereGeometry args={[180, 24, 16]} />
+    </mesh>
+  )
+}
+
 /** Dikey ekranda kamerayı geri alır, sahne "uzun ince" görünür */
 function CameraFit() {
   const camera = useThree((s) => s.camera)
@@ -743,7 +812,6 @@ function raySphere(
 
 export function RangeScene({
   active,
-  elapsed,
   shotSignal,
   reloadSignal,
   aimRef,
@@ -751,20 +819,31 @@ export function RangeScene({
   joystickActive,
   onHit,
   onMiss,
+  onEscape,
 }: RangeSceneProps) {
   const [targets, setTargets] = useState<TargetData[]>([])
   const [sparks, setSparks] = useState<Spark[]>([])
   const [tracers, setTracers] = useState<TracerData[]>([])
   const targetsRef = useRef<TargetData[]>([])
   targetsRef.current = targets
+  // test qancyası: bot playtest hedefleri okuyup nişan alabilir
+  useEffect(() => {
+    ;(window as unknown as Record<string, unknown>).__rangeTargets = targetsRef
+  }, [])
 
   // atış: gun'un baktığı yönde raycast — hedef küre çarpışması
   const handleShoot = useCallback(
     (origin: THREE.Vector3, dir: THREE.Vector3) => {
       if (!active) return
+      ;(window as unknown as Record<string, unknown>).__lastShot = {
+        origin: origin.toArray(),
+        dir: dir.toArray(),
+        aim: [aimRef.current.x, aimRef.current.y],
+        targets: targetsRef.current.map((t) => ({ id: t.id, x: t.x, y: t.y, z: t.z })),
+      }
       let best: { id: number; t: number; pos: THREE.Vector3 } | null = null
       for (const t of targetsRef.current) {
-        const tt = raySphere(origin, dir, new THREE.Vector3(t.x, t.y, t.z), 0.45)
+        const tt = raySphere(origin, dir, new THREE.Vector3(t.x, t.y, t.z), 0.5)
         if (tt !== null && (!best || tt < best.t)) {
           best = { id: t.id, t: tt, pos: new THREE.Vector3(t.x, t.y, t.z) }
         }
@@ -815,14 +894,20 @@ export function RangeScene({
         ;(window as unknown as Record<string, unknown>).__glInfo = gl.info
       }}
     >
-      <color attach="background" args={[0x9ec8e8]} />
-      <fog attach="fog" args={[0xcfe3f5, 24, 58]} />
+      <color attach="background" args={[0xa9cde8]} />
+      <fog attach="fog" args={[0xb9d6ee, 26, 62]} />
 
       <Suspense fallback={null}>
         <CameraFit />
-        <Spawner active={active} elapsed={elapsed} setTargets={setTargets} />
-        {/* prosedürel gökyüzü: güneş key light yönünde */}
-        <Sky sunPosition={[6, 9, 3]} turbidity={2.5} rayleigh={2.2} />
+        <Spawner active={active} setTargets={setTargets} />
+        <TargetLifecycle
+          active={active}
+          targetsRef={targetsRef}
+          setTargets={setTargets}
+          onEscape={onEscape}
+        />
+        {/* gradient gök kubbesi: ufuk sisle uyumlu, patlamaz */}
+        <SkyDome />
         <hemisphereLight intensity={0.85} groundColor={0x4a6a35} />
         <directionalLight position={[6, 9, 3]} intensity={2.6} color="#fff2d8" />
         <directionalLight position={[-6, 4, -4]} intensity={0.7} color="#cfe5ff" />
@@ -838,7 +923,7 @@ export function RangeScene({
         <RangeEnvironment />
 
         {targets.map((t) => (
-          <SteelTarget key={t.id} data={t} active={active} />
+          <PanelTarget key={t.id} data={t} active={active} />
         ))}
         {sparks.map((s) => (
           <Spark key={s.id} data={s} onDone={removeSpark} />
