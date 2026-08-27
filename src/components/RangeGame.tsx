@@ -184,6 +184,8 @@ export function RangeGame() {
   const aimRef = useRef({ x: 0, y: 0 })
   const [isTouch, setIsTouch] = useState(false)
   const lastTouch = useRef({ x: 0, y: 0 })
+  /** ateş butonuna basılı parmak pointerId — bu parmağın hareketi nişanı oynatmaz */
+  const firePointer = useRef<number | null>(null)
 
   useEffect(() => {
     setIsTouch(window.matchMedia('(pointer: coarse)').matches)
@@ -205,9 +207,12 @@ export function RangeGame() {
   const onTouchMove = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
       if (e.pointerType === 'mouse') return
+      // ateş butonuna basılı parmak nişanı oynatmaz
+      if (firePointer.current !== null && e.pointerId === firePointer.current) return
       const rect = e.currentTarget.getBoundingClientRect()
-      const dx = ((e.clientX - lastTouch.current.x) / rect.width) * 2 * 1.6
-      const dy = -((e.clientY - lastTouch.current.y) / rect.height) * 2 * 1.6
+      // düşük duyarlılık: parmak hareketinin ~%35'i nişana yazılır
+      const dx = ((e.clientX - lastTouch.current.x) / rect.width) * 2 * 0.35
+      const dy = -((e.clientY - lastTouch.current.y) / rect.height) * 2 * 0.35
       lastTouch.current = { x: e.clientX, y: e.clientY }
       aimRef.current.x = Math.min(Math.max(aimRef.current.x + dx, -1), 1)
       aimRef.current.y = Math.min(Math.max(aimRef.current.y + dy, -1), 1)
@@ -396,7 +401,15 @@ export function RangeGame() {
                     type="button"
                     onPointerDown={(e) => {
                       e.stopPropagation()
+                      firePointer.current = e.pointerId
                       shoot()
+                    }}
+                    onPointerUp={(e) => {
+                      e.stopPropagation()
+                      firePointer.current = null
+                    }}
+                    onPointerCancel={() => {
+                      firePointer.current = null
                     }}
                     className="absolute bottom-16 right-5 flex h-24 w-24 cursor-pointer items-center justify-center rounded-full border-2 border-primary/60 bg-primary/20 text-primary backdrop-blur-sm transition-transform duration-150 active:scale-90 active:bg-primary/40"
                     aria-label="Ateş et"

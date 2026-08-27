@@ -100,12 +100,13 @@ function PanelTarget({
 
   return (
     <group ref={group} position={[data.x, data.y - 1.1, data.z]}>
-      {/* direk + ayak */}
-      <mesh position={[0, -0.75, 0]}>
-        <boxGeometry args={[0.09, 0.75, 0.06]} />
+      {/* direk: panelden yere kadar — her yükseklik için zemine oturur */}
+      <mesh position={[0, -(data.y + 0.5) / 2, 0]}>
+        <boxGeometry args={[0.09, data.y - 0.3, 0.06]} />
         <meshStandardMaterial color="#3a3a42" metalness={0.7} roughness={0.5} />
       </mesh>
-      <mesh position={[0, -1.12, 0]}>
+      {/* ayak: zeminde, direk biter */}
+      <mesh position={[0, -data.y + 0.015, 0]}>
         <boxGeometry args={[0.55, 0.07, 0.45]} />
         <meshStandardMaterial color="#2c2c34" metalness={0.6} roughness={0.6} />
       </mesh>
@@ -281,15 +282,15 @@ function ViewModel({
   useFrame((state, delta) => {
     prepared.mixer.update(delta)
 
-    // joystick (mobil): aim'i knob yönünde döndür
+    // joystick (mobil): aim'i knob yönünde döndür (yumuşak, düşük duyarlılık)
     if (joystickActive.current) {
       aimRef.current.x = THREE.MathUtils.clamp(
-        aimRef.current.x + joystickVec.current.x * 1.4 * delta,
+        aimRef.current.x + joystickVec.current.x * 0.7 * delta,
         -1,
         1
       )
       aimRef.current.y = THREE.MathUtils.clamp(
-        aimRef.current.y + joystickVec.current.y * 1.0 * delta,
+        aimRef.current.y + joystickVec.current.y * 0.5 * delta,
         -1,
         1
       )
@@ -749,6 +750,72 @@ function SkyDome() {
   )
 }
 
+/**
+ * Ufuk fon planı: prosedürel low-poly dağ/orman silüeti (CanvasTexture, deterministik).
+ * Arka orman duvarının ardına yerleşir; sis uzaklık hissini güçlendirir, boş gökyüzünü doldurur.
+ */
+function BackdropPlate() {
+  const tex = useMemo(() => {
+    const W = 2048
+    const H = 512
+    const cv = document.createElement('canvas')
+    cv.width = W
+    cv.height = H
+    const ctx = cv.getContext('2d')!
+    ctx.clearRect(0, 0, W, H)
+
+    // bulutlar (tepe bölge)
+    ctx.fillStyle = 'rgba(255,255,255,0.9)'
+    for (let i = 0; i < 9; i++) {
+      const cx = prand(i, 3) * W
+      const cy = H * (0.06 + prand(i, 4) * 0.16)
+      const cw = W * (0.05 + prand(i, 5) * 0.08)
+      const ch = H * (0.05 + prand(i, 6) * 0.05)
+      ctx.beginPath()
+      ctx.ellipse(cx, cy, cw / 2, ch / 2, 0, 0, Math.PI * 2)
+      ctx.ellipse(cx + cw * 0.22, cy - ch * 0.35, cw / 3, ch / 2.4, 0, 0, Math.PI * 2)
+      ctx.ellipse(cx - cw * 0.22, cy - ch * 0.18, cw / 3.2, ch / 2.8, 0, 0, Math.PI * 2)
+      ctx.fill()
+    }
+
+    // silüet katmanları: taban çizgisinden aşağıya dolgu
+    const ridge = (base: number, amp: number, step: number, salt: number, color: string) => {
+      ctx.fillStyle = color
+      ctx.beginPath()
+      ctx.moveTo(0, H)
+      for (let x = 0; x <= W; x += step) {
+        const n = prand(x / step, salt)
+        const n2 = prand(x / step, salt + 9)
+        ctx.lineTo(x, base - (n * 0.65 + n2 * 0.35) * amp)
+      }
+      ctx.lineTo(W, H)
+      ctx.closePath()
+      ctx.fill()
+    }
+    ridge(H * 0.42, H * 0.3, 128, 1, '#9db4cc') // uzak dağlar
+    ridge(H * 0.58, H * 0.2, 96, 2, '#7e9c8c') // orta tepeler
+    ridge(H * 0.72, H * 0.14, 64, 3, '#527355') // yakın treeline (daha koyu, net okunur)
+
+    // altta sis rengine erime (zeminle kaynaşır)
+    const g = ctx.createLinearGradient(0, H * 0.8, 0, H)
+    g.addColorStop(0, 'rgba(185,214,238,0)')
+    g.addColorStop(1, 'rgba(185,214,238,1)')
+    ctx.fillStyle = g
+    ctx.fillRect(0, H * 0.8, W, H * 0.2)
+
+    const t = new THREE.CanvasTexture(cv)
+    t.colorSpace = THREE.SRGBColorSpace
+    return t
+  }, [])
+
+  return (
+    <mesh position={[0, 13, -42]} renderOrder={-1}>
+      <planeGeometry args={[170, 42.5]} />
+      <meshBasicMaterial map={tex} transparent depthWrite={false} />
+    </mesh>
+  )
+}
+
 /** Dikey ekranda kamerayı geri alır, sahne "uzun ince" görünür */
 function CameraFit() {
   const camera = useThree((s) => s.camera)
@@ -908,6 +975,8 @@ export function RangeScene({
         />
         {/* gradient gök kubbesi: ufuk sisle uyumlu, patlamaz */}
         <SkyDome />
+        {/* dağ/orman ufuk fonu: boş gökyüzünü doldurur */}
+        <BackdropPlate />
         <hemisphereLight intensity={0.85} groundColor={0x4a6a35} />
         <directionalLight position={[6, 9, 3]} intensity={2.6} color="#fff2d8" />
         <directionalLight position={[-6, 4, -4]} intensity={0.7} color="#cfe5ff" />

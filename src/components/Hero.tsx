@@ -139,23 +139,16 @@ export function Hero() {
           <h1 className="mt-4 font-display text-2xl uppercase tracking-wide text-foreground sm:text-4xl">
             A.T.A Pistol Team
           </h1>
-          <div className="gold-glow-sm">
-            <Suspense fallback={
-              <p
-                className="mt-2 font-display uppercase text-gold-gradient"
-                style={{ fontSize: 'clamp(3rem, 10vw, 8rem)', lineHeight: 1.05, letterSpacing: '-0.02em' }}
-              >
-                Sadece Tabanca
-              </p>
-            }>
+          <div className="hero-title-glow">
+            <Suspense fallback={null}>
               <SplitText
                 text="SADECE TABANCA"
                 className="split-gold mt-2 inline-block font-display uppercase text-[clamp(3rem,10vw,8rem)] leading-[1.05] tracking-[-0.02em]"
                 delay={45}
                 duration={0.9}
                 splitType="chars"
-                from={{ opacity: 0, y: 60, rotateX: -80 }}
-                to={{ opacity: 1, y: 0, rotateX: 0 }}
+                from={{ opacity: 0, y: 60 }}
+                to={{ opacity: 1, y: 0 }}
                 textAlign="center"
               />
             </Suspense>

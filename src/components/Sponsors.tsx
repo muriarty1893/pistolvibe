@@ -30,11 +30,11 @@ export function Sponsors() {
               dönüş yapıyoruz.
             </p>
             <a
-              href="mailto:nezihkarakoc01@gmail.com"
+              href="mailto:nezihkarakoc01@hotmail.com"
               className="relative mt-8 inline-flex cursor-pointer items-center gap-3 rounded-lg border border-primary/50 bg-primary/10 px-6 py-3 font-display text-sm uppercase tracking-widest text-primary transition-colors duration-200 hover:bg-primary/20"
             >
               <Mail className="h-4 w-4" aria-hidden="true" />
-              nezihkarakoc01@gmail.com
+              nezihkarakoc01@hotmail.com
             </a>
           </div>
         </Reveal>

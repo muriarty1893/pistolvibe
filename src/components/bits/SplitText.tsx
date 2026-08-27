@@ -41,6 +41,9 @@ const SplitText: React.FC<SplitTextProps> = ({
   const animationCompletedRef = useRef(false);
   const onCompleteRef = useRef(onLetterAnimationComplete);
   const [fontsLoaded, setFontsLoaded] = useState<boolean>(false);
+  /** split+ilk boyama bitene dek ham metni gizle: fallback-font karesi kompozit katmana
+      yanmış kalmasın (hayalet glif artefaktı) */
+  const [revealed, setRevealed] = useState(false);
 
   // Keep callback ref updated
   useEffect(() => {
@@ -102,6 +105,7 @@ const SplitText: React.FC<SplitTextProps> = ({
         reduceWhiteSpace: false,
         onSplit: (self: GSAPSplitText) => {
           assignTargets(self);
+          requestAnimationFrame(() => setRevealed(true));
           return gsap.fromTo(
             targets,
             { ...from },
@@ -159,7 +163,8 @@ const SplitText: React.FC<SplitTextProps> = ({
     const style: React.CSSProperties = {
       textAlign,
       wordWrap: 'break-word',
-      willChange: 'transform, opacity'
+      willChange: 'transform, opacity',
+      visibility: revealed ? 'visible' : 'hidden',
     };
     const classes = `split-parent overflow-hidden inline-block whitespace-normal ${className}`;
     const Tag = (tag || 'p') as React.ElementType;
