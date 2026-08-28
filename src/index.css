@@ -44,7 +44,7 @@
 }
 
 @layer utilities {
-  /* SplitText char konteynerleri için altın gradyan
+  /* SplitText char konteynerleri — "field manual" altın baskı
      NOT: char-bazlı bg-clip:text, font-swap + force3D kombinasyonunda hayalet glif
      artefaktı üretiyor (sol-ilk harf). Bunun yerine katmanlı düz renk + text-shadow. */
   .split-gold div,
@@ -54,24 +54,64 @@
     background-clip: border-box;
     color: #8a6a1a;
     text-shadow:
-      0 1px 0 rgba(138, 106, 26, 0.35),
-      0 4px 14px rgba(212, 175, 55, 0.25);
-  }
-  .gold-glow {
-    filter: drop-shadow(0 0 24px rgba(212, 175, 55, 0.45));
-  }
-  .gold-glow-sm {
-    filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.35));
+      0 1px 0 rgba(74, 56, 12, 0.35),
+      0 3px 12px rgba(138, 106, 26, 0.18);
   }
   /* background-clip:text + filter aynı ağaçta çakışınca iki kat boyama olur
-     (hayalet "S" artefaktı) — başlık glow'u filter yerine text-shadow ile */
+     (hayalet "S" artefaktı) — başlık effect'i filter yerine text-shadow ile */
   .hero-title-glow {
-    text-shadow: 0 0 24px rgba(212, 175, 55, 0.25);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55);
   }
   .bg-grid {
-    background-image: linear-gradient(rgba(154, 122, 40, 0.14) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(154, 122, 40, 0.14) 1px, transparent 1px);
+    background-image: linear-gradient(rgba(107, 101, 88, 0.14) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(107, 101, 88, 0.14) 1px, transparent 1px);
     background-size: 44px 44px;
+  }
+  /* --- Field-manual tasarım sözlüğü --- */
+  /* Ters (koyu) bölüm şeridi — gece bandı */
+  .band-invert {
+    background-color: hsl(var(--band));
+    color: hsl(var(--band-foreground));
+  }
+  /* Stencil mikro etiket: küçük, bold, geniş tracking */
+  .stencil-label {
+    font-family: 'Russo One', system-ui, sans-serif;
+    font-size: 10px;
+    line-height: 1.4;
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+  }
+  @media (min-width: 640px) {
+    .stencil-label {
+      font-size: 12px;
+    }
+  }
+  /* Çift ince kural çizgisi (baskı dokümanı hissi) */
+  .rule-double {
+    border-top: 2px solid rgba(35, 33, 28, 0.8);
+    box-shadow: 0 3px 0 -1px rgba(35, 33, 28, 0.25);
+  }
+  /* Kaşe/damga çerçevesi: çift kenar */
+  .stamp-frame {
+    border: 2px solid rgba(138, 106, 26, 0.4);
+    outline: 1px solid rgba(138, 106, 26, 0.2);
+    outline-offset: 4px;
+  }
+  /* Hafif kağıt greni (SVG feTurbulence) — kullanım: opacity-[0.04] ile overlay */
+  .paper-grain {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+  }
+  /* Zeytin/pirinç dikkat şeridi (hero alt kenarı, bölüm ayırıcı) */
+  .marker-strip {
+    height: 8px;
+    width: 100%;
+    background: repeating-linear-gradient(
+      45deg,
+      #4b5320 0 14px,
+      #e7e2d6 14px 16px,
+      #a87d1e 16px 30px,
+      #e7e2d6 30px 32px
+    );
   }
 }
 
