@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import {
   Camera,
+  CalendarDays,
   Crosshair,
   FileText,
   Lock,
@@ -27,6 +28,7 @@ import { ScoresTab } from '@/admin/ScoresTab'
 import { GalleryTab } from '@/admin/GalleryTab'
 import { StatsTab } from '@/admin/StatsTab'
 import { ArsenalTab } from '@/admin/ArsenalTab'
+import { EventsTab } from '@/admin/EventsTab'
 
 const STORAGE_KEY = 'pistolvibe-admin-key'
 
@@ -37,6 +39,7 @@ export type AdminTab =
   | 'gallery'
   | 'stats'
   | 'arsenal'
+  | 'events'
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('tr-TR', {
@@ -147,6 +150,7 @@ export default function AdminApp() {
     { id: 'gallery', label: 'Galeri', icon: Camera },
     { id: 'stats', label: 'İstatistikler', icon: RefreshCw },
     { id: 'arsenal', label: 'Cephanelik', icon: Crosshair },
+    { id: 'events', label: 'Etkinlikler', icon: CalendarDays },
   ]
 
   return (
@@ -210,6 +214,7 @@ export default function AdminApp() {
             )}
             {tab === 'stats' && <StatsTab data={data} adminKey={adminKey} />}
             {tab === 'arsenal' && <ArsenalTab data={data} adminKey={adminKey} />}
+            {tab === 'events' && <EventsTab data={data} adminKey={adminKey} />}
           </>
         )}
       </main>
