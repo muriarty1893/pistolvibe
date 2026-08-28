@@ -48,45 +48,32 @@ function HeroGuns() {
     const id = window.setTimeout(() => setMounted(true), 300)
     return () => window.clearTimeout(id)
   }, [])
-  if (!mounted) return null
+  // Mobilde 3D tabanca yok — sadece masaüstünde render edilir.
+  if (!mounted || !isDesktop) return null
   return (
     <Suspense fallback={null}>
       <DualPistolViewer
         className="absolute inset-0"
-        guns={
-          isDesktop
-            ? [
-                {
-                  url: '/models/9mm_pistol.glb',
-                  muzzle: -1,
-                  size: 1.55,
-                  position: [-1.75, -0.7, 0],
-                  spin: 0.32,
-                  phase: 0,
-                  tilt: -0.5,
-                },
-                {
-                  url: '/models/colt_m1911.glb',
-                  muzzle: -1,
-                  size: 1.55,
-                  position: [1.75, -0.7, 0],
-                  spin: -0.32,
-                  phase: 2.1,
-                  tilt: 0.5,
-                },
-              ]
-            : [
-                {
-                  url: '/models/9mm_pistol.glb',
-                  muzzle: -1,
-                  size: 1.15,
-                  position: [0, -0.7, 0],
-                  spin: 0.3,
-                  phase: 0,
-                  tilt: -0.5,
-                },
-              ]
-        }
+        guns={[
+          {
+            url: '/models/9mm_pistol.glb',
+            muzzle: -1,
+            size: 1.55,
+            position: [-1.75, -0.7, 0],
+            spin: 0.32,
+            phase: 0,
+            tilt: -0.5,
+          },
+          {
+            url: '/models/colt_m1911.glb',
+            muzzle: -1,
+            size: 1.55,
+            position: [1.75, -0.7, 0],
+            spin: -0.32,
+            phase: 2.1,
+            tilt: 0.5,
+          },
+        ]}
       />
     </Suspense>
   )
