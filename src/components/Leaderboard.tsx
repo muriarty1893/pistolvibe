@@ -77,7 +77,7 @@ export function Leaderboard() {
                           className={cn(
                             'h-4 w-4',
                             i === 0 && 'text-primary',
-                            i === 1 && 'text-slate-300',
+                            i === 1 && 'text-slate-400',
                             i === 2 && 'text-amber-700'
                           )}
                           aria-hidden="true"

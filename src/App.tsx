@@ -27,7 +27,7 @@ export default function App() {
         <Comments />
       </main>
       <Footer />
-      <Toaster theme="dark" richColors position="top-center" />
+      <Toaster theme="light" richColors position="top-center" />
     </div>
   )
 }

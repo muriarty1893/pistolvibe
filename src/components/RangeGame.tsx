@@ -25,7 +25,7 @@ function GameLoader() {
   const { active, progress } = useProgress()
   if (!active) return null
   return (
-    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-[#0b0b0e]">
+    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-background">
       <div className="h-1 w-44 overflow-hidden rounded-full bg-border">
         <div className="h-full bg-primary transition-all duration-300" style={{ width: `${progress}%` }} />
       </div>

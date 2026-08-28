@@ -294,9 +294,9 @@ export function DualPistolViewer({ guns, className }: DualPistolViewerProps) {
         <Suspense fallback={null}>
           <hemisphereLight intensity={0.5} groundColor={0x0a0a0a} />
           <directionalLight position={[3, 4, 5]} intensity={2.2} color={0xfff2cc} />
-          <directionalLight position={[-4, 2, -3]} intensity={2.4} color={0xd4af37} />
+          <directionalLight position={[-4, 2, -3]} intensity={3.2} color={0xd4af37} />
           <directionalLight position={[0, -3, 2]} intensity={0.5} color={0x8899ff} />
-          <pointLight position={[0, 0, 3]} intensity={12} color={0xffe9b0} distance={9} />
+          <pointLight position={[0, 0, 3]} intensity={14} color={0xffe9b0} distance={9} />
           <Environment preset="city" />
           <ParallaxRig>
             {guns.map((spec, i) => (
@@ -349,9 +349,9 @@ export function PistolViewer({
           <group position={position}>
           <hemisphereLight intensity={0.5} groundColor={0x0a0a0a} />
           <directionalLight position={[3, 4, 5]} intensity={2.2} color={0xfff2cc} />
-          <directionalLight position={[-4, 2, -3]} intensity={2.4} color={0xd4af37} />
+          <directionalLight position={[-4, 2, -3]} intensity={3.2} color={0xd4af37} />
           <directionalLight position={[0, -3, 2]} intensity={0.5} color={0x8899ff} />
-          <pointLight position={[0, 0, 3]} intensity={12} color={0xffe9b0} distance={9} />
+          <pointLight position={[0, 0, 3]} intensity={14} color={0xffe9b0} distance={9} />
           <Environment preset="city" />
           <Float speed={1.6} rotationIntensity={aim ? 0 : 0.15} floatIntensity={aim ? 0.35 : 0.9}>
             <PistolMesh

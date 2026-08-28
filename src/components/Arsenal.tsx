@@ -57,7 +57,7 @@ export function Arsenal() {
               <span key={pistol.id} className="flex items-center gap-[var(--gap)]">
                 <span
                   className="whitespace-nowrap font-display text-3xl uppercase tracking-widest text-transparent sm:text-5xl"
-                  style={{ WebkitTextStroke: '1px rgba(212,175,55,0.55)' }}
+                  style={{ WebkitTextStroke: '1px rgba(154,122,40,0.6)' }}
                 >
                   {pistol.name}
                 </span>

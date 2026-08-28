@@ -106,7 +106,7 @@ function HeroParticles() {
           particleCount={180}
           particleSpread={12}
           speed={0.08}
-          particleColors={['#d4af37', '#f5d876', '#8a6d1f']}
+          particleColors={['#c9a227', '#8a6a1a', '#e3c766']}
           moveParticlesOnHover
           particleBaseSize={30}
           sizeRandomness={0.6}
@@ -125,7 +125,7 @@ export function Hero() {
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            'radial-gradient(ellipse 60% 50% at 50% 30%, rgba(212,175,55,0.12), transparent 70%)',
+            'radial-gradient(ellipse 60% 50% at 50% 30%, rgba(212,175,55,0.18), transparent 70%)',
         }}
       />
       <HeroGuns />
