@@ -38,6 +38,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         stats: req.body?.stats,
         arsenal: req.body?.arsenal,
         gallery: req.body?.gallery,
+        events: req.body?.events,
       })
       await withRedis((client) => client.set(CONTENT_KEY, JSON.stringify(content)))
       return res.status(200).json({ ok: true })
