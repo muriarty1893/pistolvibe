@@ -292,7 +292,7 @@ export function RangeGame() {
 
         <div
           ref={containerRef}
-          className="relative mx-auto h-[600px] w-full max-w-md select-none overflow-hidden rounded-xl border border-border bg-[#0b0b0e] sm:h-[560px] sm:max-w-5xl"
+          className="relative mx-auto h-[600px] w-full max-w-md select-none overflow-hidden rounded-xl border-2 border-foreground/20 bg-paper-deep sm:h-[560px] sm:max-w-5xl"
         >
           <GameLoader />
           {phase === 'playing' && (
@@ -423,7 +423,7 @@ export function RangeGame() {
 
           {phase === 'idle' && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 bg-grid p-6 text-center">
-              <Crosshair className="h-14 w-14 text-primary gold-glow-sm" aria-hidden="true" />
+              <Crosshair className="h-14 w-14 text-brass-deep" aria-hidden="true" />
               <div>
                 <h3 className="font-display text-2xl uppercase tracking-wide text-foreground">
                   Sonsuz Seri Seni Bekliyor
@@ -462,12 +462,12 @@ export function RangeGame() {
 
           {phase === 'over' && result && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 bg-background/95 p-6 text-center">
-              <Trophy className="h-12 w-12 text-primary gold-glow-sm" aria-hidden="true" />
+              <Trophy className="h-12 w-12 text-brass-deep" aria-hidden="true" />
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
                   Seri Bitti{handle.trim() ? ` — @${handle.trim()}` : ''}
                 </p>
-                <p className="mt-2 font-display text-5xl text-[#e8bf4d] sm:text-6xl">
+                <p className="mt-2 font-display text-5xl text-brass-deep sm:text-6xl">
                   {result.score.toLocaleString('tr-TR')}
                 </p>
                 <p className="mt-3 text-sm text-muted-foreground">
