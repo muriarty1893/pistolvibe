@@ -47,6 +47,7 @@ export function ArsenalTab({ data, adminKey }: Props) {
           stats: data.content.stats,
           arsenal: arsenal.map((a) => ({ ...a, href: a.href?.trim() || undefined })),
           gallery: data.content.gallery,
+          events: data.content.events,
         }),
       'Cephanelik kaydedildi'
     )

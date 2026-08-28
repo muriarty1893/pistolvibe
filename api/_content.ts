@@ -21,10 +21,19 @@ export interface GalleryItem {
   caption?: string
 }
 
+export interface EventItem {
+  id: string
+  title: string
+  date: string
+  location: string
+  description?: string
+}
+
 export interface SiteContent {
   stats: StatItem[]
   arsenal: ArsenalItem[]
   gallery: GalleryItem[]
+  events: EventItem[]
   updatedAt?: string
 }
 
@@ -50,6 +59,7 @@ export const DEFAULT_CONTENT: SiteContent = {
   stats: DEFAULT_STATS,
   arsenal: DEFAULT_ARSENAL,
   gallery: [],
+  events: [],
 }
 
 export const CONTENT_KEY = 'content'
@@ -117,6 +127,20 @@ export function sanitizeGallery(input: unknown): GalleryItem[] | null {
     .filter((item) => item.url)
 }
 
+export function sanitizeEvents(input: unknown): EventItem[] | null {
+  if (!Array.isArray(input)) return null
+  return input
+    .slice(0, 30)
+    .map((raw) => ({
+      id: typeof raw?.id === 'string' && raw.id ? raw.id : uid(),
+      title: String(raw?.title ?? '').replace(/[<>]/g, '').trim().slice(0, 80),
+      date: String(raw?.date ?? '').replace(/[<>]/g, '').trim().slice(0, 40),
+      location: String(raw?.location ?? '').replace(/[<>]/g, '').trim().slice(0, 80),
+      description: String(raw?.description ?? '').replace(/[<>]/g, '').trim().slice(0, 400),
+    }))
+    .filter((item) => item.title && item.date)
+}
+
 export function sanitizeContent(input: unknown): SiteContent {
   const base =
     typeof input === 'object' && input !== null ? (input as Partial<SiteContent>) : {}
@@ -124,6 +148,7 @@ export function sanitizeContent(input: unknown): SiteContent {
     stats: sanitizeStats(base.stats) ?? DEFAULT_STATS,
     arsenal: sanitizeArsenal(base.arsenal) ?? DEFAULT_ARSENAL,
     gallery: sanitizeGallery(base.gallery) ?? [],
+    events: sanitizeEvents(base.events) ?? [],
     updatedAt: new Date().toISOString(),
   }
 }

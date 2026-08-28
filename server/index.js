@@ -34,6 +34,7 @@ const DEFAULT_CONTENT = {
     { id: 'arsenal-glock17', name: 'Glock 17 Gen 4', href: 'https://weairsoft.com/we-g001b-bk.html' },
   ],
   gallery: [],
+  events: [],
 }
 
 async function readJson(file, fallback) {
@@ -325,6 +326,7 @@ app.put('/api/admin-content', async (req, res) => {
     arsenal:
       Array.isArray(body.arsenal) && body.arsenal.length > 0 ? body.arsenal : current.arsenal,
     gallery: Array.isArray(body.gallery) ? body.gallery : current.gallery,
+    events: Array.isArray(body.events) ? body.events : current.events,
     updatedAt: new Date().toISOString(),
   }
   await writeJson(CONTENT_FILE, next)

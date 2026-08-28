@@ -53,6 +53,7 @@ export function StatsTab({ data, adminKey }: Props) {
           stats,
           arsenal: data.content.arsenal,
           gallery: data.content.gallery,
+          events: data.content.events,
         }),
       'İstatistikler kaydedildi'
     )

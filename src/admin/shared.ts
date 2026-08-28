@@ -51,10 +51,19 @@ export interface GalleryItem {
   caption?: string
 }
 
+export interface EventItem {
+  id: string
+  title: string
+  date: string
+  location: string
+  description?: string
+}
+
 export interface SiteContent {
   stats: StatItem[]
   arsenal: ArsenalItem[]
   gallery: GalleryItem[]
+  events: EventItem[]
   updatedAt?: string
 }
 
@@ -123,7 +132,7 @@ export const deleteScore = (key: string, id: string) =>
 // Tüm site içeriğini kaydet (istatistikler + cephanelik + galeri tek doküman)
 export async function saveSiteContent(
   key: string,
-  content: Pick<SiteContent, 'stats' | 'arsenal' | 'gallery'>
+  content: Pick<SiteContent, 'stats' | 'arsenal' | 'gallery' | 'events'>
 ): Promise<void> {
   const res = await fetch('/api/admin-content', {
     method: 'PUT',

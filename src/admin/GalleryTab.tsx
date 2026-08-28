@@ -69,6 +69,7 @@ export function GalleryTab({ data, adminKey, onChanged }: Props) {
           stats: data.content.stats,
           arsenal: data.content.arsenal,
           gallery: list,
+          events: data.content.events,
         }),
       'Galeri kaydedildi'
     )

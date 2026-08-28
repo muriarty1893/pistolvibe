@@ -4,6 +4,7 @@ export interface SiteContent {
   stats: Array<{ id: string; value: number; suffix: string; label: string }>
   arsenal: Array<{ id: string; name: string; href?: string }>
   gallery: Array<{ id: string; url: string; caption?: string }>
+  events: Array<{ id: string; title: string; date: string; location: string; description?: string }>
 }
 
 // Varsayılanlar API erişilemezse / içerik hiç kaydedilmediyse kullanılır.
@@ -23,7 +24,14 @@ export const DEFAULT_ARSENAL: SiteContent['arsenal'] = [
   { id: 'arsenal-glock17', name: 'Glock 17 Gen 4', href: 'https://weairsoft.com/we-g001b-bk.html' },
 ]
 
-const FALLBACK: SiteContent = { stats: DEFAULT_STATS, arsenal: DEFAULT_ARSENAL, gallery: [] }
+export const DEFAULT_EVENTS: SiteContent['events'] = []
+
+const FALLBACK: SiteContent = {
+  stats: DEFAULT_STATS,
+  arsenal: DEFAULT_ARSENAL,
+  gallery: [],
+  events: DEFAULT_EVENTS,
+}
 
 let cache: SiteContent | null = null
 
@@ -43,6 +51,7 @@ export function useSiteContent() {
               ? data.arsenal
               : DEFAULT_ARSENAL,
           gallery: Array.isArray(data.gallery) ? data.gallery : [],
+          events: Array.isArray(data.events) ? data.events : DEFAULT_EVENTS,
         }
         cache = next
         setContent(next)
