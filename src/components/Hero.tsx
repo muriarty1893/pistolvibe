@@ -1,5 +1,4 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { Crosshair, ShieldCheck, Users } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { RollingText } from '@/components/RollingText'
@@ -10,24 +9,6 @@ const DualPistolViewer = lazy(() =>
 )
 const Particles = lazy(() => import('@/components/bits/Particles'))
 const SplitText = lazy(() => import('@/components/bits/SplitText'))
-
-const PILLARS = [
-  {
-    icon: Crosshair,
-    title: 'Sadece Tabanca',
-    text: 'Tüfek yok, sniper yok. Yakın mesafe, tam konsantrasyon — CQB’nin en saf hali.',
-  },
-  {
-    icon: ShieldCheck,
-    title: 'Fair Play',
-    text: 'Hit aldım demek erdemdir. Sahada saygı ve dürüstlük her şeyden önce gelir.',
-  },
-  {
-    icon: Users,
-    title: 'Kardeşlik',
-    text: 'Sahada bir ekip, saha dışında bir aile. Birlikte oynar, birlikte öğreniriz.',
-  },
-]
 
 function useIsDesktop() {
   const [isDesktop, setIsDesktop] = useState(false)
@@ -104,6 +85,43 @@ function HeroParticles() {
   )
 }
 
+interface HeroComment {
+  id: string
+  name: string
+  pistol: string
+  message: string
+  createdAt: string
+}
+
+function HeroComments() {
+  const [comments, setComments] = useState<HeroComment[]>([])
+
+  useEffect(() => {
+    fetch('/api/comments')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => setComments(Array.isArray(data) ? data.slice(0, 3) : []))
+      .catch(() => setComments([]))
+  }, [])
+
+  if (comments.length === 0) return null
+
+  return (
+    <div className="pointer-events-auto mt-20 grid w-full max-w-4xl grid-cols-1 gap-4 sm:grid-cols-3">
+      {comments.map((comment, i) => (
+        <Reveal key={comment.id} delay={300 + i * 120}>
+          <div className="h-full rounded-lg border border-border bg-card/60 p-6 text-left backdrop-blur-sm transition-colors duration-200 hover:border-primary/50">
+            <p className="font-display text-sm uppercase tracking-wider text-foreground">
+              {comment.name}
+            </p>
+            <p className="mt-1 text-xs uppercase tracking-widest text-primary">{comment.pistol}</p>
+            <p className="mt-3 line-clamp-4 text-sm text-muted-foreground">{comment.message}</p>
+          </div>
+        </Reveal>
+      ))}
+    </div>
+  )
+}
+
 export function Hero() {
   return (
     <section id="anasayfa" className="relative overflow-hidden bg-grid">
@@ -159,19 +177,7 @@ export function Hero() {
           </Button>
         </Reveal>
 
-        <div className="pointer-events-auto mt-20 grid w-full max-w-4xl grid-cols-1 gap-4 sm:grid-cols-3">
-          {PILLARS.map((pillar, i) => (
-            <Reveal key={pillar.title} delay={300 + i * 120}>
-              <div className="rounded-lg border border-border bg-card/60 p-6 text-left backdrop-blur-sm transition-colors duration-200 hover:border-primary/50">
-                <pillar.icon className="h-7 w-7 text-primary" aria-hidden="true" />
-                <h3 className="mt-4 font-display text-sm uppercase tracking-wider text-foreground">
-                  {pillar.title}
-                </h3>
-                <p className="mt-2 text-sm text-muted-foreground">{pillar.text}</p>
-              </div>
-            </Reveal>
-          ))}
-        </div>
+        <HeroComments />
       </div>
     </section>
   )
