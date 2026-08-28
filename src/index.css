@@ -6,25 +6,25 @@
 
 @layer base {
   :root {
-    --background: 0 0% 4%;
-    --foreground: 46 30% 96%;
-    --card: 0 0% 7%;
-    --card-foreground: 46 30% 96%;
-    --popover: 0 0% 7%;
-    --popover-foreground: 46 30% 96%;
-    --primary: 46 65% 52%;
-    --primary-foreground: 0 0% 5%;
-    --secondary: 0 0% 12%;
-    --secondary-foreground: 46 30% 96%;
-    --muted: 0 0% 12%;
-    --muted-foreground: 40 8% 64%;
-    --accent: 46 65% 52%;
-    --accent-foreground: 0 0% 5%;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 9%;
+    --card: 0 0% 99%;
+    --card-foreground: 0 0% 9%;
+    --popover: 0 0% 99%;
+    --popover-foreground: 0 0% 9%;
+    --primary: 45 62% 38%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 40 14% 96%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 40 14% 96%;
+    --muted-foreground: 25 5% 40%;
+    --accent: 45 62% 38%;
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
-    --border: 46 20% 18%;
-    --input: 46 15% 22%;
-    --ring: 46 65% 52%;
+    --border: 40 12% 88%;
+    --input: 40 12% 84%;
+    --ring: 45 62% 38%;
     --radius: 0.5rem;
   }
 }
@@ -50,28 +50,25 @@
     background: none;
     -webkit-background-clip: border-box;
     background-clip: border-box;
-    color: #e8bf4d;
+    color: #8a6a1a;
     text-shadow:
-      0 1px 0 #a8811f,
-      0 2px 0 #8a6a1a,
-      0 4px 14px rgba(212, 175, 55, 0.35);
+      0 1px 0 rgba(138, 106, 26, 0.35),
+      0 4px 14px rgba(212, 175, 55, 0.25);
   }
   .gold-glow {
-    filter: drop-shadow(0 0 30px rgba(212, 175, 55, 0.35));
+    filter: drop-shadow(0 0 24px rgba(212, 175, 55, 0.45));
   }
   .gold-glow-sm {
-    filter: drop-shadow(0 0 14px rgba(212, 175, 55, 0.25));
+    filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.35));
   }
   /* background-clip:text + filter aynı ağaçta çakışınca iki kat boyama olur
      (hayalet "S" artefaktı) — başlık glow'u filter yerine text-shadow ile */
   .hero-title-glow {
-    text-shadow:
-      0 0 14px rgba(212, 175, 55, 0.28),
-      0 0 30px rgba(212, 175, 55, 0.18);
+    text-shadow: 0 0 24px rgba(212, 175, 55, 0.25);
   }
   .bg-grid {
-    background-image: linear-gradient(rgba(212, 175, 55, 0.06) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(212, 175, 55, 0.06) 1px, transparent 1px);
+    background-image: linear-gradient(rgba(154, 122, 40, 0.14) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(154, 122, 40, 0.14) 1px, transparent 1px);
     background-size: 44px 44px;
   }
 }
