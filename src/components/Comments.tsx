@@ -96,8 +96,11 @@ export function Comments() {
 
         <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 lg:grid-cols-5">
           <Reveal className="lg:col-span-2">
-            <Card className="border-border bg-card/80">
+            <Card className="stamp-frame rounded-md bg-card">
               <CardContent className="p-6">
+                <p className="stencil-label mb-4 text-muted-foreground/60" aria-hidden="true">
+                  Saha Raporu — BR-116
+                </p>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-5">
                     <FormField
@@ -169,19 +172,21 @@ export function Comments() {
               <div className="flex flex-col gap-4">
                 {comments.map((comment, i) => (
                   <Reveal key={comment.id} delay={Math.min(i * 80, 400)}>
-                    <Card className="border-border bg-card/80 transition-colors duration-200 hover:border-primary/40">
+                    <Card className="rounded-md border-l-2 border-l-primary/40 bg-card transition-colors duration-200 hover:border-primary/40">
                       <CardContent className="p-5">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <p className="font-display text-sm uppercase tracking-wider text-foreground">
                             {comment.name}
                           </p>
-                          <Badge variant="outline">{comment.pistol}</Badge>
+                          <Badge variant="outline" className="text-[10px] uppercase tracking-widest">
+                            {comment.pistol}
+                          </Badge>
                         </div>
                         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
                           {comment.message}
                         </p>
-                        <p className="mt-3 text-xs text-muted-foreground/60">
-                          {formatDate(comment.createdAt)}
+                        <p className="stencil-label mt-3 text-[10px] text-muted-foreground/60">
+                          Kayıt: {formatDate(comment.createdAt)}
                         </p>
                       </CardContent>
                     </Card>
