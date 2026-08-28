@@ -14,15 +14,8 @@ export function Sponsors() {
         />
 
         <Reveal>
-          <div className="relative mx-auto max-w-3xl overflow-hidden rounded-xl border border-primary/30 bg-card/60 px-6 py-16 text-center backdrop-blur-sm">
-            <div
-              className="pointer-events-none absolute inset-0"
-              style={{
-                background:
-                  'radial-gradient(ellipse 60% 60% at 50% 50%, rgba(212,175,55,0.1), transparent 70%)',
-              }}
-            />
-            <p className="relative font-display text-4xl uppercase tracking-wide text-[#e8bf4d] sm:text-6xl">
+          <div className="stamp-frame relative mx-auto max-w-3xl rounded-lg bg-card px-6 py-16 text-center">
+            <p className="relative font-display text-4xl uppercase tracking-wide text-brass-deep sm:text-6xl">
               #İşbirliği
             </p>
             <p className="relative mx-auto mt-6 max-w-md text-sm text-muted-foreground sm:text-base">
@@ -31,7 +24,7 @@ export function Sponsors() {
             </p>
             <a
               href="mailto:nezihkarakoc01@hotmail.com"
-              className="relative mt-8 inline-flex cursor-pointer items-center gap-3 rounded-lg border border-primary/50 bg-primary/10 px-6 py-3 font-display text-sm uppercase tracking-widest text-primary transition-colors duration-200 hover:bg-primary/20"
+              className="relative mt-8 inline-flex cursor-pointer items-center gap-3 rounded-md border-2 border-primary bg-transparent px-6 py-3 font-display text-sm uppercase tracking-widest text-primary transition-colors duration-200 hover:bg-primary hover:text-primary-foreground"
             >
               <Mail className="h-4 w-4" aria-hidden="true" />
               nezihkarakoc01@hotmail.com
