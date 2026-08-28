@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
+import { MessageSquare } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { RollingText } from '@/components/RollingText'
@@ -164,7 +165,7 @@ export function Hero() {
           </p>
         </Reveal>
 
-        <Reveal delay={200} className="pointer-events-auto mt-10 flex flex-col items-center gap-4 sm:flex-row">
+        <Reveal delay={200} className="pointer-events-auto mt-10 flex flex-col items-center gap-4 sm:flex-row sm:flex-wrap sm:justify-center">
           <Button asChild size="lg">
             <a href="#basvuru">
               <RollingText text="Hemen Başvur" />
@@ -173,6 +174,12 @@ export function Hero() {
           <Button asChild size="lg" variant="outline">
             <a href="#arena">
               <RollingText text="Refleksini Test Et" />
+            </a>
+          </Button>
+          <Button asChild size="lg" variant="outline">
+            <a href="#topluluk">
+              <MessageSquare className="h-4 w-4" aria-hidden="true" />
+              <RollingText text="Yorum Yaz" />
             </a>
           </Button>
         </Reveal>
