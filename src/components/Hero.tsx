@@ -40,20 +40,20 @@ function HeroGuns() {
           {
             url: '/models/9mm_pistol.glb',
             muzzle: -1,
-            size: 1.55,
-            position: [-1.75, -0.7, 0],
+            size: 1.35,
+            position: [-2.0, -1.05, 0],
             spin: 0.32,
             phase: 0,
-            tilt: -0.5,
+            tilt: -0.4,
           },
           {
             url: '/models/colt_m1911.glb',
             muzzle: -1,
-            size: 1.55,
-            position: [1.75, -0.7, 0],
+            size: 1.35,
+            position: [2.0, -1.05, 0],
             spin: -0.32,
             phase: 2.1,
-            tilt: 0.5,
+            tilt: 0.4,
           },
         ]}
       />
@@ -110,7 +110,7 @@ function HeroComments() {
     <div className="pointer-events-auto mx-auto flex w-full max-w-md flex-col gap-4 lg:ml-auto lg:mr-0">
       {comments.map((comment, i) => (
         <Reveal key={comment.id} delay={300 + i * 120}>
-          <div className="h-full rounded-md border border-border bg-card/80 p-5 transition-colors duration-200 hover:border-primary/50">
+          <div className="h-full rounded-md border border-border bg-card p-5 transition-colors duration-200 hover:border-primary/50">
             <p className="stencil-label text-muted-foreground/60" aria-hidden="true">
               TAKDİM — {String(i + 1).padStart(2, '0')}
             </p>

@@ -24,10 +24,10 @@ export function Sponsors() {
             </p>
             <a
               href="mailto:nezihkarakoc01@hotmail.com"
-              className="relative mt-8 inline-flex cursor-pointer items-center gap-3 rounded-md border-2 border-primary bg-transparent px-6 py-3 font-display text-sm uppercase tracking-widest text-primary transition-colors duration-200 hover:bg-primary hover:text-primary-foreground"
+              className="relative mt-8 inline-flex max-w-full cursor-pointer items-center gap-3 rounded-md border-2 border-primary bg-transparent px-4 py-3 font-display text-xs uppercase tracking-widest text-primary transition-colors duration-200 hover:bg-primary hover:text-primary-foreground sm:px-6 sm:text-sm"
             >
-              <Mail className="h-4 w-4" aria-hidden="true" />
-              nezihkarakoc01@hotmail.com
+              <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span className="break-all">nezihkarakoc01@hotmail.com</span>
             </a>
           </div>
         </Reveal>
