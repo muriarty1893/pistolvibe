@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { CONTENT_KEY, parseStoredContent, withRedis } from './redis-client.js'
+import { CONTENT_KEY, parseStoredContent } from './_content.js'
+import { withRedis } from './redis-client.js'
 
 // GET /api/content → { stats, arsenal, gallery }
 // Public: frontend StatsStrip / Arsenal / Gallery bunu kullanır.

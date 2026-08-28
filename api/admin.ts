@@ -195,7 +195,7 @@ async function removeListItem(key: string, id: string): Promise<boolean> {
   })
 }
 
-async function updateListItem<T extends { id: string; [k: string]: unknown }>(
+async function updateListItem<T extends { id: string }>(
   key: string,
   id: string,
   transform: (old: T) => T
