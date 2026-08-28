@@ -6,6 +6,7 @@ import { RangeGame } from '@/components/RangeGame'
 import { Leaderboard } from '@/components/Leaderboard'
 import { ApplicationForm } from '@/components/ApplicationForm'
 import { Gallery } from '@/components/Gallery'
+import { Events } from '@/components/Events'
 import { Sponsors } from '@/components/Sponsors'
 import { Comments } from '@/components/Comments'
 import { Footer } from '@/components/Footer'
@@ -23,6 +24,7 @@ export default function App() {
         <Leaderboard />
         <ApplicationForm />
         <Gallery />
+        <Events />
         <Sponsors />
         <Comments />
       </main>

@@ -13,6 +13,7 @@ const LINKS = [
   { href: '#cephanelik', label: 'Cephanelik' },
   { href: '#arena', label: 'Arena' },
   { href: '#tablo', label: 'Tablo' },
+  { href: '#etkinlikler', label: 'Etkinlikler' },
   { href: '#galeri', label: 'Galeri' },
   { href: '#topluluk', label: 'Topluluk' },
 ]
