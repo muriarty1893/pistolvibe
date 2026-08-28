@@ -3,6 +3,7 @@ import { Users, Swords, Crosshair, CalendarDays } from 'lucide-react'
 
 import { SectionHeading } from '@/components/SectionHeading'
 import { Reveal } from '@/components/Reveal'
+import { cn } from '@/lib/utils'
 import { useSiteContent } from '@/lib/use-site-content'
 
 const CountUp = lazy(() => import('@/components/bits/CountUp'))
@@ -13,21 +14,50 @@ export function StatsStrip() {
   const { stats } = useSiteContent()
 
   return (
-    <section className="relative border-y border-border bg-card/40 py-20">
+    <section className="relative py-24">
       <div className="container mx-auto px-6">
-        <SectionHeading
-          badge="Rakamlarla"
-          title="Takımın Nabzı"
-        />
-        <div className="mx-auto grid max-w-5xl grid-cols-2 gap-6 lg:grid-cols-4">
+        <SectionHeading badge="Rakamlarla" title="Takımın Nabzı" />
+        <div className="mx-auto grid max-w-3xl grid-cols-2 gap-6">
           {stats.map((stat, i) => {
             const Icon = ICONS[i % ICONS.length]
+            const inverted = i === 0
             return (
               <Reveal key={stat.id} delay={i * 100}>
-                <div className="rounded-lg border border-border bg-card/60 p-6 text-center transition-colors duration-200 hover:border-primary/50">
-                  <Icon className="mx-auto h-6 w-6 text-primary" aria-hidden="true" />
-                  <p className="mt-4 font-display text-3xl text-[#e8bf4d] sm:text-4xl">
-                    <Suspense fallback={<span>{stat.value.toLocaleString('tr-TR')}{stat.suffix}</span>}>
+                <div
+                  className={cn(
+                    'relative h-full rounded-lg border-2 p-8 transition-colors duration-200',
+                    inverted
+                      ? 'band-invert border-band hover:border-brass-pop/60'
+                      : 'border-border bg-card hover:border-primary/50'
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'stencil-label absolute right-4 top-4',
+                      inverted ? 'text-band-foreground/40' : 'text-muted-foreground/50'
+                    )}
+                    aria-hidden="true"
+                  >
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <Icon
+                    className={cn('h-6 w-6', inverted ? 'text-brass-pop' : 'text-brass-deep')}
+                    aria-hidden="true"
+                  />
+                  <p
+                    className={cn(
+                      'mt-4 font-display text-5xl tabular-nums',
+                      inverted ? 'text-brass-pop' : 'text-primary'
+                    )}
+                  >
+                    <Suspense
+                      fallback={
+                        <span>
+                          {stat.value.toLocaleString('tr-TR')}
+                          {stat.suffix}
+                        </span>
+                      }
+                    >
                       <CountUp
                         key={`${stat.id}-${stat.value}`}
                         to={stat.value}
@@ -44,7 +74,12 @@ export function StatsStrip() {
                     </Suspense>
                     {stat.suffix}
                   </p>
-                  <p className="mt-2 text-xs uppercase tracking-widest text-muted-foreground">
+                  <p
+                    className={cn(
+                      'stencil-label mt-3',
+                      inverted ? 'text-band-foreground/60' : 'text-muted-foreground'
+                    )}
+                  >
                     {stat.label}
                   </p>
                 </div>
