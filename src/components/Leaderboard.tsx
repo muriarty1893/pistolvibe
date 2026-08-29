@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Medal } from 'lucide-react'
 
 import { SectionHeading } from '@/components/SectionHeading'
 import { Reveal } from '@/components/Reveal'
@@ -45,8 +46,8 @@ export function Leaderboard() {
         />
 
         <Reveal className="mx-auto max-w-3xl">
-          <div className="overflow-hidden rounded-md border-2 border-foreground/15 bg-card shadow-[6px_6px_0_0_rgba(35,33,28,0.06)]">
-            <div className="stencil-label grid grid-cols-[3rem_1fr_5rem_5rem] items-center gap-2 border-b-2 border-foreground/15 bg-secondary/60 px-4 py-3 text-muted-foreground sm:grid-cols-[3rem_1fr_6rem_6rem_6rem]">
+          <div className="overflow-hidden rounded-xl border border-border bg-card/50">
+            <div className="grid grid-cols-[3rem_1fr_5rem_5rem] items-center gap-2 border-b border-border bg-secondary/40 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:grid-cols-[3rem_1fr_6rem_6rem_6rem]">
               <span>#</span>
               <span>Çağrı Adı</span>
               <span className="text-right">Skor</span>
@@ -67,34 +68,30 @@ export function Leaderboard() {
                     key={row.id}
                     className={cn(
                       'grid grid-cols-[3rem_1fr_5rem_5rem] items-center gap-2 px-4 py-3 text-sm transition-colors duration-200 hover:bg-primary/5 sm:grid-cols-[3rem_1fr_6rem_6rem_6rem]',
-                      i % 2 === 1 && 'bg-secondary/30'
+                      i % 2 === 1 && 'bg-secondary/20'
                     )}
                   >
-                    <span className="flex items-center">
+                    <span className="flex items-center font-display">
                       {i < 3 ? (
-                        <span
+                        <Medal
                           className={cn(
-                            'inline-flex h-7 w-7 items-center justify-center border-2 font-display',
-                            i === 0 && 'border-brass-deep bg-brass-deep/10 text-brass-deep',
-                            i === 1 && 'border-foreground/40 text-foreground/70',
-                            i === 2 && 'border-foreground/25 text-foreground/50'
+                            'h-4 w-4',
+                            i === 0 && 'text-primary',
+                            i === 1 && 'text-slate-400',
+                            i === 2 && 'text-amber-700'
                           )}
-                          aria-label={`${i + 1}. sıra`}
-                        >
-                          {i + 1}
-                        </span>
+                          aria-hidden="true"
+                        />
                       ) : (
                         <span className="text-muted-foreground">{i + 1}</span>
                       )}
                     </span>
                     <span className="truncate font-medium text-foreground">{row.callsign}</span>
-                    <span className="text-right font-display tabular-nums text-primary">
+                    <span className="text-right font-display text-primary">
                       {row.score.toLocaleString('tr-TR')}
                     </span>
-                    <span className="text-right tabular-nums text-muted-foreground">
-                      {row.accuracy}%
-                    </span>
-                    <span className="hidden text-right tabular-nums text-muted-foreground sm:block">
+                    <span className="text-right text-muted-foreground">{row.accuracy}%</span>
+                    <span className="hidden text-right text-muted-foreground sm:block">
                       {row.bestStreak}
                     </span>
                   </li>

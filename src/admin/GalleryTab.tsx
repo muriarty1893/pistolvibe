@@ -122,7 +122,7 @@ export function GalleryTab({ data, adminKey, onChanged }: Props) {
 
         <div className="flex items-center gap-3">
           {dirty && !isBlocked && (
-            <span className="text-xs font-medium text-amber-700">Kaydedilmemiş değişiklikler</span>
+            <span className="text-xs font-medium text-[#e8bf4d]">Kaydedilmemiş değişiklikler</span>
           )}
           <Button
             size="sm"

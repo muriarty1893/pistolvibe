@@ -97,56 +97,7 @@ export function ApplicationForm() {
         />
 
         <Reveal>
-          <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-5">
-            <aside className="flex flex-col gap-6 rounded-lg bg-primary p-8 text-primary-foreground lg:col-span-2">
-              <div>
-                <p className="stencil-label text-primary-foreground/60" aria-hidden="true">
-                  GÖREVLİ ALIMI — PV/BR-114
-                </p>
-                <p className="mt-3 font-display text-2xl uppercase tracking-wide">Kabul Şartları</p>
-              </div>
-              <ol className="flex flex-col gap-5 text-sm">
-                <li className="flex gap-4">
-                  <span className="stencil-label mt-0.5 text-primary-foreground/50" aria-hidden="true">
-                    01
-                  </span>
-                  <div>
-                    <p className="font-semibold uppercase tracking-wider">Teçhizat</p>
-                    <p className="mt-1 text-primary-foreground/80">
-                      Kendi tabancan ve koruyucu gözlüğünle sahadasin.
-                    </p>
-                  </div>
-                </li>
-                <li className="flex gap-4">
-                  <span className="stencil-label mt-0.5 text-primary-foreground/50" aria-hidden="true">
-                    02
-                  </span>
-                  <div>
-                    <p className="font-semibold uppercase tracking-wider">Rütbeler</p>
-                    <p className="mt-1 text-primary-foreground/80">
-                      Çağrı adın sahada kim olduğun — ilk oyun gününde açılır.
-                    </p>
-                  </div>
-                </li>
-                <li className="flex gap-4">
-                  <span className="stencil-label mt-0.5 text-primary-foreground/50" aria-hidden="true">
-                    03
-                  </span>
-                  <div>
-                    <p className="font-semibold uppercase tracking-wider">Fair Play</p>
-                    <p className="mt-1 text-primary-foreground/80">
-                      Vuruşta rapperi derhal işaret et. Güvenlik kuralları pazarlık kabul etmez.
-                    </p>
-                  </div>
-                </li>
-              </ol>
-              <p className="mt-auto border-t border-primary-foreground/20 pt-5 text-xs leading-relaxed text-primary-foreground/70">
-                Deneme oyununa davet edilen adaylar e-posta ve Instagram DM üzerinden
-                bilgilendirilir.
-              </p>
-            </aside>
-
-            <Card className="border-2 border-foreground/15 bg-card lg:col-span-3">
+          <Card className="mx-auto max-w-2xl border-border bg-card/80">
             <CardContent className="p-6 sm:p-8">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -288,7 +239,6 @@ export function ApplicationForm() {
               </Form>
             </CardContent>
           </Card>
-          </div>
         </Reveal>
       </div>
     </section>

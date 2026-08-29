@@ -38,17 +38,17 @@ export function Navbar() {
     <header className="fixed inset-x-4 top-4 z-50">
       <nav
         className={cn(
-          'mx-auto flex max-w-6xl items-center justify-between rounded-lg border bg-card/85 px-4 py-3 backdrop-blur-md transition-all duration-300',
+          'mx-auto flex max-w-6xl items-center justify-between rounded-lg border px-4 py-3 transition-colors duration-300',
           scrolled
-            ? 'border-foreground/15 shadow-md shadow-foreground/10'
-            : 'border-border shadow-sm'
+            ? 'border-white/10 bg-[#0a0a0c]/90 shadow-lg shadow-black/30 backdrop-blur-md'
+            : 'border-white/10 bg-[#0a0a0c]/90 backdrop-blur-md'
         )}
         aria-label="Ana gezinme"
       >
         <a href="#anasayfa" className="flex cursor-pointer items-center gap-3">
-          <img src="/assets/logo-nobg.png" alt="Pistol Vibe logosu" className="h-10 w-10" />
-          <span className="font-display text-sm uppercase tracking-widest text-foreground sm:text-base">
-            Pistol <span className="text-brass-deep">Vibe</span>
+          <img src="/assets/logo-nobg.png" alt="Pistol Vibe logosu" className="h-10 w-10 gold-glow-sm" />
+          <span className="font-display text-sm uppercase tracking-widest text-white sm:text-base">
+            Pistol <span className="text-[#e8bf4d]">Vibe</span>
           </span>
         </a>
 
@@ -57,7 +57,7 @@ export function Navbar() {
             <a
               key={link.href}
               href={link.href}
-              className="cursor-pointer text-sm font-medium uppercase tracking-wider text-ink-soft transition-colors duration-200 hover:text-primary"
+              className="cursor-pointer text-sm font-medium uppercase tracking-wider text-white/70 transition-colors duration-200 hover:text-[#e8bf4d]"
             >
               {link.label}
             </a>
@@ -71,7 +71,7 @@ export function Navbar() {
 
         <button
           type="button"
-          className="cursor-pointer rounded-md p-2 text-ink-soft transition-colors duration-200 hover:bg-secondary hover:text-primary md:hidden"
+          className="cursor-pointer rounded-md p-2 text-white transition-colors duration-200 hover:bg-white/10 hover:text-[#e8bf4d] md:hidden"
           onClick={() => setOpen((v) => !v)}
           aria-label={open ? 'Menüyü kapat' : 'Menüyü aç'}
           aria-expanded={open}
@@ -81,14 +81,14 @@ export function Navbar() {
       </nav>
 
       {open && (
-        <div className="mx-auto mt-2 max-w-6xl rounded-lg border border-border bg-card/95 p-4 shadow-md shadow-foreground/10 backdrop-blur-md md:hidden">
+        <div className="mx-auto mt-2 max-w-6xl rounded-lg border border-white/10 bg-[#0a0a0c]/95 p-4 shadow-lg shadow-black/30 backdrop-blur-md md:hidden">
           <div className="flex flex-col gap-1">
             {LINKS.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
                 onClick={() => setOpen(false)}
-                className="cursor-pointer rounded-md px-3 py-2 text-sm font-medium uppercase tracking-wider text-ink-soft transition-colors duration-200 hover:bg-secondary hover:text-primary"
+                className="cursor-pointer rounded-md px-3 py-2 text-sm font-medium uppercase tracking-wider text-white/70 transition-colors duration-200 hover:bg-white/10 hover:text-[#e8bf4d]"
               >
                 {link.label}
               </a>

@@ -22,41 +22,36 @@ export function Events() {
 
         {events.length === 0 ? (
           <Reveal>
-            <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 rounded-md border-2 border-dashed border-border py-16 text-muted-foreground">
+            <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 rounded-lg border border-dashed border-border py-16 text-muted-foreground">
               <CalendarDays className="h-10 w-10 opacity-40" aria-hidden="true" />
-              <p className="stencil-label">Takvim Boş — Takipte Kal</p>
+              <p className="text-sm">Planlanmış etkinlik yok. Takipte kal!</p>
             </div>
           </Reveal>
         ) : (
-          <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="mx-auto grid max-w-5xl grid-cols-1 gap-4 md:grid-cols-2">
             {events.map((event, i) => (
               <Reveal key={event.id} delay={Math.min(i * 100, 400)}>
-                <div className="flex h-full overflow-hidden rounded-md border-2 border-foreground/15 bg-card shadow-[4px_4px_0_0_rgba(75,83,32,0.08)] transition-colors duration-200 hover:border-primary/50">
-                  <div className="flex w-20 shrink-0 flex-col items-center justify-center gap-1 border-r border-dashed border-border bg-secondary/50 py-6 sm:w-24">
-                    <CalendarDays
-                      className="h-4 w-4 text-brass-deep"
-                      aria-hidden="true"
-                    />
-                    <span className="mt-1 text-center font-display text-xs uppercase tracking-wider text-primary">
+                <div className="h-full rounded-lg border border-border bg-card/60 p-6 transition-colors duration-200 hover:border-primary/50">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs uppercase tracking-widest text-primary">
+                    <span className="inline-flex items-center gap-1.5">
+                      <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
                       {event.date}
                     </span>
-                  </div>
-                  <div className="flex-1 p-6">
-                    <h3 className="font-display text-lg uppercase tracking-wide text-foreground">
-                      {event.title}
-                    </h3>
-                    {event.description && (
-                      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                        {event.description}
-                      </p>
-                    )}
                     {event.location && (
-                      <p className="mt-3 inline-flex items-center gap-1.5 text-xs uppercase tracking-widest text-muted-foreground">
-                        <MapPin className="h-3.5 w-3.5 text-brass-deep" aria-hidden="true" />
+                      <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                        <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
                         {event.location}
-                      </p>
+                      </span>
                     )}
                   </div>
+                  <h3 className="mt-3 font-display text-lg uppercase tracking-wide text-foreground">
+                    {event.title}
+                  </h3>
+                  {event.description && (
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                      {event.description}
+                    </p>
+                  )}
                 </div>
               </Reveal>
             ))}

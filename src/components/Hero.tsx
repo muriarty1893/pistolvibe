@@ -40,20 +40,20 @@ function HeroGuns() {
           {
             url: '/models/9mm_pistol.glb',
             muzzle: -1,
-            size: 1.35,
-            position: [-2.0, -1.05, 0],
+            size: 1.55,
+            position: [-1.75, -0.7, 0],
             spin: 0.32,
             phase: 0,
-            tilt: -0.4,
+            tilt: -0.5,
           },
           {
             url: '/models/colt_m1911.glb',
             muzzle: -1,
-            size: 1.35,
-            position: [2.0, -1.05, 0],
+            size: 1.55,
+            position: [1.75, -0.7, 0],
             spin: -0.32,
             phase: 2.1,
-            tilt: 0.4,
+            tilt: 0.5,
           },
         ]}
       />
@@ -69,13 +69,13 @@ function HeroParticles() {
   }, [])
   if (!mounted) return null
   return (
-    <div className="pointer-events-none absolute inset-0 opacity-30">
+    <div className="pointer-events-none absolute inset-0 opacity-50">
       <Suspense fallback={null}>
         <Particles
           particleCount={180}
           particleSpread={12}
           speed={0.08}
-          particleColors={['#8A6A1A', '#6B6558', '#A87D1E']}
+          particleColors={['#c9a227', '#8a6a1a', '#e3c766']}
           moveParticlesOnHover
           particleBaseSize={30}
           sizeRandomness={0.6}
@@ -100,21 +100,18 @@ function HeroComments() {
   useEffect(() => {
     fetch('/api/comments')
       .then((res) => (res.ok ? res.json() : []))
-      .then((data) => setComments(Array.isArray(data) ? data.slice(0, 2) : []))
+      .then((data) => setComments(Array.isArray(data) ? data.slice(0, 3) : []))
       .catch(() => setComments([]))
   }, [])
 
   if (comments.length === 0) return null
 
   return (
-    <div className="pointer-events-auto mx-auto flex w-full max-w-md flex-col gap-4 lg:ml-auto lg:mr-0">
+    <div className="pointer-events-auto mt-20 grid w-full max-w-4xl grid-cols-1 gap-4 sm:grid-cols-3">
       {comments.map((comment, i) => (
         <Reveal key={comment.id} delay={300 + i * 120}>
-          <div className="h-full rounded-md border border-border bg-card p-5 transition-colors duration-200 hover:border-primary/50">
-            <p className="stencil-label text-muted-foreground/60" aria-hidden="true">
-              TAKDİM — {String(i + 1).padStart(2, '0')}
-            </p>
-            <p className="mt-3 font-display text-sm uppercase tracking-wider text-foreground">
+          <div className="h-full rounded-lg border border-border bg-card/60 p-6 text-left backdrop-blur-sm transition-colors duration-200 hover:border-primary/50">
+            <p className="font-display text-sm uppercase tracking-wider text-foreground">
               {comment.name}
             </p>
             <p className="mt-1 text-xs uppercase tracking-widest text-primary">{comment.pistol}</p>
@@ -129,85 +126,66 @@ function HeroComments() {
 export function Hero() {
   return (
     <section id="anasayfa" className="relative overflow-hidden bg-grid">
-      <div className="paper-grain pointer-events-none absolute inset-0 opacity-[0.04]" aria-hidden="true" />
       <HeroParticles />
       <div
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            'radial-gradient(ellipse 60% 50% at 50% 30%, rgba(138,106,26,0.10), transparent 70%)',
+            'radial-gradient(ellipse 60% 50% at 50% 30%, rgba(212,175,55,0.18), transparent 70%)',
         }}
       />
       <HeroGuns />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background to-transparent" />
 
-      <div className="container relative mx-auto flex min-h-screen flex-col justify-center px-6 pb-16 pt-32">
-        <div className="grid w-full items-center gap-12 lg:grid-cols-12">
-          <div className="text-center lg:col-span-7 lg:text-left">
-            <Reveal>
-              <div
-                className="flex items-center justify-center gap-3 lg:justify-start"
-                aria-hidden="true"
-              >
-                <span className="inline-block h-2 w-2 bg-primary" />
-                <span className="stencil-label text-muted-foreground">
-                  A.T.A Pistol Team — Adana
-                </span>
-                <span className="stencil-label hidden text-muted-foreground/60 sm:inline">
-                  BR-110
-                </span>
-              </div>
-              <h1 className="mt-4 font-display text-2xl uppercase tracking-wide text-foreground sm:text-4xl">
-                A.T.A Pistol Team
-              </h1>
-              <div className="hero-title-glow">
-                <Suspense fallback={null}>
-                  <SplitText
-                    text="SADECE TABANCA"
-                    className="split-gold mt-2 inline-block font-display uppercase text-[clamp(3rem,10vw,8rem)] leading-[1.05] tracking-[-0.02em]"
-                    delay={45}
-                    duration={0.9}
-                    splitType="chars"
-                    from={{ opacity: 0, y: 60 }}
-                    to={{ opacity: 1, y: 0 }}
-                    textAlign="center"
-                  />
-                </Suspense>
-              </div>
-              <p className="mx-auto mt-6 max-w-xl text-base text-muted-foreground sm:text-lg lg:mx-0">
-                Tüfek yok, sniper yok. Sadece tabanca, refleks ve cesaret. Adana&apos;nın tek
-                tabanca-only airsoft ekibine hoş geldin.
-              </p>
-              <div className="rule-double mt-8 hidden max-w-md lg:block" />
-            </Reveal>
-
-            <Reveal delay={200} className="pointer-events-auto mt-10 flex flex-col items-center gap-4 sm:flex-row sm:flex-wrap lg:items-start lg:justify-start">
-              <Button asChild size="lg">
-                <a href="#basvuru">
-                  <RollingText text="Hemen Başvur" />
-                </a>
-              </Button>
-              <Button asChild size="lg" variant="outline">
-                <a href="#arena">
-                  <RollingText text="Refleksini Test Et" />
-                </a>
-              </Button>
-              <Button asChild size="lg" variant="outline">
-                <a href="#topluluk">
-                  <MessageSquare className="h-4 w-4" aria-hidden="true" />
-                  <RollingText text="Yorum Yaz" />
-                </a>
-              </Button>
-            </Reveal>
+      <div className="container relative mx-auto flex min-h-screen flex-col items-center justify-center px-6 pb-20 pt-32 text-center">
+        <Reveal>
+          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground sm:text-sm">
+            Airsoft Takımı • Adana
+          </p>
+          <h1 className="mt-4 font-display text-2xl uppercase tracking-wide text-foreground sm:text-4xl">
+            A.T.A Pistol Team
+          </h1>
+          <div className="hero-title-glow">
+            <Suspense fallback={null}>
+              <SplitText
+                text="SADECE TABANCA"
+                className="split-gold mt-2 inline-block font-display uppercase text-[clamp(3rem,10vw,8rem)] leading-[1.05] tracking-[-0.02em]"
+                delay={45}
+                duration={0.9}
+                splitType="chars"
+                from={{ opacity: 0, y: 60 }}
+                to={{ opacity: 1, y: 0 }}
+                textAlign="center"
+              />
+            </Suspense>
           </div>
+          <p className="mx-auto mt-6 max-w-xl text-base text-muted-foreground sm:text-lg">
+            Tüfek yok, sniper yok. Sadece tabanca, refleks ve cesaret. Adana&apos;nın tek tabanca-only
+            airsoft ekibine hoş geldin.
+          </p>
+        </Reveal>
 
-          <div className="lg:col-span-5">
-            <HeroComments />
-          </div>
-        </div>
+        <Reveal delay={200} className="pointer-events-auto mt-10 flex flex-col items-center gap-4 sm:flex-row sm:flex-wrap sm:justify-center">
+          <Button asChild size="lg">
+            <a href="#basvuru">
+              <RollingText text="Hemen Başvur" />
+            </a>
+          </Button>
+          <Button asChild size="lg" variant="outline">
+            <a href="#arena">
+              <RollingText text="Refleksini Test Et" />
+            </a>
+          </Button>
+          <Button asChild size="lg" variant="outline">
+            <a href="#topluluk">
+              <MessageSquare className="h-4 w-4" aria-hidden="true" />
+              <RollingText text="Yorum Yaz" />
+            </a>
+          </Button>
+        </Reveal>
+
+        <HeroComments />
       </div>
-
-      <div className="marker-strip relative z-10" aria-hidden="true" />
     </section>
   )
 }
